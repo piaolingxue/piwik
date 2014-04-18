@@ -55,7 +55,7 @@ class Request
         // The URL can default to the Referrer, which will be in this case
         // the URL of the page containing the Simple Image beacon
         if (empty($this->params['urlref'])
-            && empty($this->params['url'])
+            && empty($this->params['url']) && isset($_SERVER['HTTP_REFERER'])
         ) {
             $url = @$_SERVER['HTTP_REFERER'];
             if (!empty($url)) {
