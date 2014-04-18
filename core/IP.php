@@ -346,7 +346,11 @@ class IP
      */
     public static function getIpFromHeader()
     {
-        $clientHeaders = @Config::getInstance()->General['proxy_client_headers'];
+        $clientHeaders = array();
+        $config = Config::getInstance()->General;
+        if (isset($config['proxy_client_headers'])) {
+            $clientHeaders = $config['proxy_client_headers'];
+        }
         if (!is_array($clientHeaders)) {
             $clientHeaders = array();
         }
