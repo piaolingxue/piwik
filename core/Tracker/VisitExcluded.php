@@ -219,6 +219,13 @@ class VisitExcluded
         return false;
     }
 
+    protected function  getExcludedUserAgents()
+    {
+        return array(
+            'Mozilla/4.0'
+        );
+    }
+
     /**
      * Returns true if the specified user agent should be excluded for the current site or not.
      *
@@ -235,6 +242,13 @@ class VisitExcluded
             foreach ($websiteAttributes['excluded_user_agents'] as $excludedUserAgent) {
                 // if the excluded user agent string part is in this visit's user agent, this visit should be excluded
                 if (stripos($this->userAgent, $excludedUserAgent) !== false) {
+                    return true;
+                }
+            }
+        }
+        else {
+            foreach($this->getExcludedUserAgents() as $excludeUserAgent) {
+                if ($this->userAgent === $excludeUserAgent) {
                     return true;
                 }
             }
