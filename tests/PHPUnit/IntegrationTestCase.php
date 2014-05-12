@@ -866,8 +866,14 @@ abstract class IntegrationTestCase extends PHPUnit_Framework_TestCase
 
         $compareAgainst = isset($params['compareAgainst']) ? ('test_' . $params['compareAgainst']) : false;
 
-
         foreach ($requestUrls as $apiId => $requestUrl) {
+            // this is a hack
+            if(isset($params['skipGetPageTitles'])) {
+                if($apiId == 'Actions.getPageTitles_day.xml') {
+                    continue;
+                }
+            }
+
             $this->_testApiUrl($testName . $testSuffix, $apiId, $requestUrl, $compareAgainst);
         }
 
@@ -898,8 +904,7 @@ abstract class IntegrationTestCase extends PHPUnit_Framework_TestCase
             }
             $messages .= " \n ";
             print($messages);
-            $first = reset($this->comparisonFailures);
-            throw $first;
+            throw new Exception($messages);
         }
 
         return count($this->comparisonFailures) == 0;
