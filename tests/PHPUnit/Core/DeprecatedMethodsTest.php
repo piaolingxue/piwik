@@ -6,11 +6,7 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 use Piwik\AssetManager;
-use Piwik\AssetManager\UIAsset\OnDiskUIAsset;
 use Piwik\AssetManager\UIAsset;
-use Piwik\AssetManager\UIAssetFetcher\StaticUIAssetFetcher;
-use Piwik\Config;
-use Piwik\Plugin\Manager;
 use Piwik\Plugin;
 
 /**
@@ -26,6 +22,9 @@ class DeprecatedMethodsTest extends PHPUnit_Framework_TestCase
 
         $validTill = '2014-10-01';
         $this->assertDeprecatedMethodIsRemoved('\Piwik\Config', 'getConfigSuperUserForBackwardCompatibility', $validTill);
+
+        $validTill = '2014-10-15';
+        $this->assertDeprecatedMethodIsRemoved('\Piwik\SettingsPiwik', 'rewriteTmpPathWithHostname', $validTill);
     }
 
     private function assertDeprecatedMethodIsRemoved($className, $method, $removalDate)

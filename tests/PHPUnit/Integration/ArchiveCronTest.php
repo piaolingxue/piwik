@@ -6,12 +6,11 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-use Piwik\Access;
 use Piwik\Date;
 use Piwik\Plugins\SitesManager\API;
 
 /**
- * Tests to call the archive.php cron script and check there is no error,
+ * Tests to call the cron core:archive command script and check there is no error,
  * Then call the API testing for "Browser archiving is disabled" (see disableArchiving)
  * This tests that, when archiving is disabled,
  *  then Piwik API will return data that was pre-processed during archive.php run
