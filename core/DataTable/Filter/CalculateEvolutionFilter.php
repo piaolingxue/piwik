@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,12 +17,12 @@ use Piwik\Site;
  * it to each row as a percentage.
  *
  * **This filter cannot be used as an argument to {@link Piwik\DataTable::filter()}** since
- * it requires corresponding data from another DataTable. Instead, 
+ * it requires corresponding data from another DataTable. Instead,
  * you must manually perform a binary filter (see the **MultiSites** API for an
  * example).
  *
  * The evolution metric is calculated as:
- * 
+ *
  *     ((currentValue - pastValue) / pastValue) * 100
  *
  * @api

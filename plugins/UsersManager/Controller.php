@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,6 +17,7 @@ use Piwik\Plugins\LanguagesManager\API as APILanguagesManager;
 use Piwik\Plugins\LanguagesManager\LanguagesManager;
 use Piwik\Plugins\SitesManager\API as APISitesManager;
 use Piwik\Plugins\UsersManager\API as APIUsersManager;
+use Piwik\SettingsPiwik;
 use Piwik\Site;
 use Piwik\Tracker\IgnoreCookie;
 use Piwik\Url;
@@ -209,20 +210,30 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
         $view->userAlias = $user['alias'];
         $view->userEmail = $user['email'];
 
-        $defaultReport = APIUsersManager::getInstance()->getUserPreference($userLogin, APIUsersManager::PREFERENCE_DEFAULT_REPORT);
+        $view->ignoreSalt = $this->getIgnoreCookieSalt();
+
+        $userPreferences = new UserPreferences();
+        $defaultReport   = $userPreferences->getDefaultReport();
+
         if ($defaultReport === false) {
-            $defaultReport = $this->getDefaultWebsiteId();
+            $defaultReport = $userPreferences->getDefaultWebsiteId();
         }
+
         $view->defaultReport = $defaultReport;
 
         if ($defaultReport == 'MultiSites') {
-            $view->defaultReportSiteName = Site::getNameFor($this->getDefaultWebsiteId());
+
+            $defaultSiteId = $userPreferences->getDefaultWebsiteId();
+
+            $view->defaultReportIdSite   = $defaultSiteId;
+            $view->defaultReportSiteName = Site::getNameFor($defaultSiteId);
         } else {
+            $view->defaultReportIdSite   = $defaultReport;
             $view->defaultReportSiteName = Site::getNameFor($defaultReport);
         }
 
         $view->defaultDate = $this->getDefaultDateForUser($userLogin);
-        $view-> availableDefaultDates = $this->getDefaultDates();
+        $view->availableDefaultDates = $this->getDefaultDates();
 
         $view->languages = APILanguagesManager::getInstance()->getAvailableLanguageNames();
         $view->currentLanguageCode = LanguagesManager::getLanguageCodeForCurrentUser();
@@ -238,7 +249,11 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
     {
         Piwik::checkUserHasSomeViewAccess();
         Piwik::checkUserIsNotAnonymous();
-        $this->checkTokenInUrl();
+
+        $salt = Common::getRequestVar('ignoreSalt', false, 'string');
+        if($salt !== $this->getIgnoreCookieSalt()) {
+            throw new Exception("Not authorized");
+        }
 
         IgnoreCookie::setIgnoreCookie();
         Piwik::redirectToModule('UsersManager', 'userSettings', array('token_auth' => false));
@@ -379,5 +394,13 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
         if ($newPassword !== false) {
             \Piwik\Registry::get('auth')->initSession($userLogin, md5($newPassword), $rememberMe = false);
         }
+    }
+
+    /**
+     * @return string
+     */
+    private function getIgnoreCookieSalt()
+    {
+        return md5(SettingsPiwik::getSalt());
     }
 }

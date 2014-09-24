@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link     http://piwik.org
  * @license  http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -30,8 +30,6 @@ class CompareKeys extends ConsoleCommand
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $dialog = $this->getHelperSet()->get('dialog');
-
         $command = $this->getApplication()->find('translations:fetch');
         $arguments = array(
             'command'    => 'translations:fetch',
@@ -60,10 +58,10 @@ class CompareKeys extends ConsoleCommand
 
         $unnecessary = $outdated = $missing = array();
 
-        foreach ($categories AS $category)
+        foreach ($categories as $category)
         {
             if (!empty($englishFromOTrance[$category])) {
-                foreach ($englishFromOTrance[$category] AS $key => $value) {
+                foreach ($englishFromOTrance[$category] as $key => $value) {
                     if(!array_key_exists($category, $availableTranslations) || !array_key_exists($key, $availableTranslations[$category])) {
                         $unnecessary[] = sprintf('%s_%s', $category, $key);
                         continue;
@@ -74,7 +72,7 @@ class CompareKeys extends ConsoleCommand
                 }
             }
             if (!empty($availableTranslations[$category])) {
-                foreach ($availableTranslations[$category] AS $key => $value) {
+                foreach ($availableTranslations[$category] as $key => $value) {
                     if(!array_key_exists($category, $englishFromOTrance) || !array_key_exists($key, $englishFromOTrance[$category])) {
                         $missing[] = sprintf('%s_%s', $category, $key);
                         continue;

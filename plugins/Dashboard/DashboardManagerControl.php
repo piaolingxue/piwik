@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link     http://piwik.org
  * @license  http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -18,7 +18,7 @@ class DashboardManagerControl extends DashboardSettingsControlBase
     public function __construct()
     {
         parent::__construct();
-        
+
         $this->jsClass = "DashboardManagerControl";
         $this->cssIdentifier = "dashboard-manager";
 

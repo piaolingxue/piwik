@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,7 @@
 use Piwik\Config;
 use Piwik\Db;
 use Piwik\Plugins\Goals\API;
+use Piwik\Tests\Fixture;
 
 require_once PIWIK_INCLUDE_PATH . '/tests/PHPUnit/IntegrationTestCase.php';
 require_once PIWIK_INCLUDE_PATH . '/tests/LocalTracker.php';
@@ -20,7 +21,7 @@ foreach (glob(PIWIK_INCLUDE_PATH . '/tests/PHPUnit/Benchmarks/Fixtures/*.php') a
 /**
  * Base class for benchmarks.
  */
-abstract class BenchmarkTestCase extends IntegrationTestCase
+abstract class BenchmarkTestCase extends \Piwik\Tests\IntegrationTestCase
 {
     protected static $fixture;
 

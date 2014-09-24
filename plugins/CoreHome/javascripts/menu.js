@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -62,8 +62,10 @@ menu.prototype =
                 return;
             }
             var url = href.substr(1);
-            var module = broadcast.getValueFromUrl("module", url);
-            var action = broadcast.getValueFromUrl("action", url);
+
+            var module = broadcast.getValueFromUrl('module', url);
+            var action = broadcast.getValueFromUrl('action', url);
+
             var moduleId = broadcast.getValueFromUrl("idGoal", url) || broadcast.getValueFromUrl("idDashboard", url);
             var main_menu = $(this).parent().hasClass('Menu-tabList') ? true : false;
             if (main_menu) {

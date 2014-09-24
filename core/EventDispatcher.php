@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -46,6 +46,21 @@ class EventDispatcher extends Singleton
     private $pendingEvents = array();
 
     /**
+     * Plugin\Manager instance used to get list of loaded plugins.
+     *
+     * @var Piwik\Plugin\Manager
+     */
+    private $pluginManager;
+
+    /**
+     * Constructor.
+     */
+    public function __construct($pluginManager = null)
+    {
+        $this->pluginManager = $pluginManager;
+    }
+
+    /**
      * Triggers an event, executing all callbacks associated with it.
      *
      * @param string $eventName The name of the event, ie, API.getReportMetadata.
@@ -64,7 +79,7 @@ class EventDispatcher extends Singleton
         }
 
         if (empty($plugins)) {
-            $plugins = \Piwik\Plugin\Manager::getInstance()->getPluginsLoadedAndActivated();
+            $plugins = $this->getPluginManager()->getPluginsLoadedAndActivated();
         }
 
         $callbacks = array();
@@ -72,7 +87,7 @@ class EventDispatcher extends Singleton
         // collect all callbacks to execute
         foreach ($plugins as $plugin) {
             if (is_string($plugin)) {
-                $plugin = \Piwik\Plugin\Manager::getInstance()->getLoadedPlugin($plugin);
+                $plugin = $this->getPluginManager()->getLoadedPlugin($plugin);
             }
 
             $hooks = $plugin->getListHooksRegistered();
@@ -91,6 +106,9 @@ class EventDispatcher extends Singleton
                 $callbacks[$callbackGroup][] = $callback;
             }
         }
+
+        // sort callbacks by their importance
+        ksort($callbacks);
 
         // execute callbacks in order
         foreach ($callbacks as $callbackGroup) {
@@ -171,10 +189,9 @@ class EventDispatcher extends Singleton
             if (!empty($hookInfo['before'])) {
                 $callbackGroup = self::EVENT_CALLBACK_GROUP_FIRST;
             } else if (!empty($hookInfo['after'])) {
-                $callbackGroup = self::EVENT_CALLBACK_GROUP_SECOND;
-            } else {
                 $callbackGroup = self::EVENT_CALLBACK_GROUP_THIRD;
-            }
+            } else {
+                $callbackGroup = self::EVENT_CALLBACK_GROUP_SECOND;            }
         } else {
             $pluginFunction = $hookInfo;
             $callbackGroup = self::EVENT_CALLBACK_GROUP_SECOND;
@@ -182,5 +199,17 @@ class EventDispatcher extends Singleton
 
         return array($pluginFunction, $callbackGroup);
     }
-}
 
+    /**
+     * Returns the Plugin\Manager instance used by the event dispatcher.
+     *
+     * @return Plugin\Manager
+     */
+    private function getPluginManager()
+    {
+        if ($this->pluginManager === null) {
+            $this->pluginManager = Plugin\Manager::getInstance();
+        }
+        return $this->pluginManager;
+    }
+}

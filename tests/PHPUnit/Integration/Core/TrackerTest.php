@@ -1,10 +1,12 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+
+use Piwik\Tests\Fixture;
 
 /**
  * @group Core
@@ -48,10 +50,10 @@ class Core_TrackerTest extends DatabaseTestCase
         $command = 'curl -s -X POST -d \'{"requests":["?idsite=1&url=http://example.org&action_name=Test bulk log Pageview&rec=1","?idsite=1&url=http://example.net/test.htm&action_name=Another bulk page view&rec=1"],"token_auth":"' . $token_auth . '"}\' ' . $piwikHost;
 
         exec($command, $output, $result);
-        $output = implode("", $output);
         if ($result !== 0) {
             throw new Exception("tracking bulk failed: " . implode("\n", $output) . "\n\ncommand used: $command");
         }
+        $output = implode("", $output);
         $this->assertStringStartsWith('{"status":', $output);
 
         if($expectTrackingToSucceed) {

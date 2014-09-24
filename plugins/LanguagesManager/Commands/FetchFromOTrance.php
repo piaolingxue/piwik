@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -140,7 +140,7 @@ class FetchFromOTrance extends ConsoleCommand
         $progress = $this->getHelperSet()->get('progress');
 
         $progress->start($output, count($filesToConvert));
-        foreach ($filesToConvert AS $filename) {
+        foreach ($filesToConvert as $filename) {
 
             require_once $filename;
             $basename = explode(".", basename($filename));

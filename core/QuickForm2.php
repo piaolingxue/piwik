@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -118,7 +118,7 @@ abstract class QuickForm2 extends HTML_QuickForm2
         return array_filter($messages);
     }
 
-    static protected $registered = false;
+    protected static $registered = false;
 
     /**
      * Returns the rendered form as an array.

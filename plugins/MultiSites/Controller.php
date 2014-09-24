@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -63,8 +63,6 @@ class Controller extends \Piwik\Plugin\Controller
         $view->dateSparkline = $period == 'range' ? $date : $params['date'];
 
         $this->setGeneralVariablesView($view);
-
-        $view->siteName = Piwik::translate('General_AllWebsitesDashboard');
 
         return $view->render();
     }

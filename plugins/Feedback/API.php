@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -45,11 +45,11 @@ class API extends \Piwik\Plugin\API
 
         $body = sprintf("Feature: %s\nLike: %s\n", $featureName, $likeText, $message);
 
-        $feedbackMessage = " \n";
+        $feedbackMessage = "";
         if (!empty($message) && $message != 'undefined') {
             $feedbackMessage = sprintf("Feedback:\n%s\n", trim($message));
         }
-        $body .= $feedbackMessage;
+        $body .= $feedbackMessage ? $feedbackMessage : " \n";
 
         $subject = sprintf("%s for %s %s",
             empty($like) ? "-1" : "+1",
@@ -78,20 +78,6 @@ class API extends \Piwik\Plugin\API
         @$mail->send();
     }
 
-    private function findTranslationKeyForFeatureName($featureName)
-    {
-        if (empty($GLOBALS['Piwik_translations'])) {
-            return;
-        }
-
-        foreach ($GLOBALS['Piwik_translations'] as $key => $translations) {
-            $possibleKey = array_search($featureName, $translations);
-            if (!empty($possibleKey)) {
-                return $key . '_' . $possibleKey;
-            }
-        }
-    }
-
     private function getEnglishTranslationForFeatureName($featureName)
     {
         $loadedLanguage = Translate::getLanguageLoaded();
@@ -100,7 +86,7 @@ class API extends \Piwik\Plugin\API
             return $featureName;
         }
 
-        $translationKeyForFeature = $this->findTranslationKeyForFeatureName($featureName);
+        $translationKeyForFeature = Translate::findTranslationKeyForTranslation($featureName);
 
         if (!empty($translationKeyForFeature)) {
             Translate::reloadLanguage('en');

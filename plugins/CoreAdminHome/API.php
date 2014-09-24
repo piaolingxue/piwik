@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -10,6 +10,7 @@ namespace Piwik\Plugins\CoreAdminHome;
 
 use Exception;
 use Piwik\DataAccess\ArchiveTableCreator;
+use Piwik\DataAccess\ArchiveWriter;
 use Piwik\Date;
 use Piwik\Db;
 use Piwik\Option;
@@ -56,10 +57,13 @@ class API extends \Piwik\Plugin\API
      *
      * @param string $idSites Comma separated list of idSite that have had data imported for the specified dates
      * @param string $dates Comma separated list of dates to invalidate for all these websites
+     * @param string $period If specified (one of day, week, month, year, range) it will only delete archives for this period.
+     *                      Note: because week, month, year, range reports aggregate day reports then you need to specifically invalidate day reports to see
+     *                      other periods reports processed..
      * @throws Exception
      * @return array
      */
-    public function invalidateArchivedReports($idSites, $dates)
+    public function invalidateArchivedReports($idSites, $dates, $period = false)
     {
         $idSites = Site::getIdSitesFromIdSitesString($idSites);
         if (empty($idSites)) {
@@ -67,11 +71,16 @@ class API extends \Piwik\Plugin\API
         }
         Piwik::checkUserHasAdminAccess($idSites);
 
+        if(!empty($period)) {
+            $period = Period\Factory::build($period, Date::today());
+        }
+
         // Ensure the specified dates are valid
         $toInvalidate = $invalidDates = array();
-        $dates = explode(',', $dates);
+        $dates = explode(',', trim($dates));
         $dates = array_unique($dates);
         foreach ($dates as $theDate) {
+            $theDate = trim($theDate);
             try {
                 $date = Date::factory($theDate);
             } catch (Exception $e) {
@@ -132,6 +141,12 @@ class API extends \Piwik\Plugin\API
             }
         }
 
+        if(empty($minDate)) {
+            throw new Exception("Check the 'dates' parameter is a valid date.");
+        }
+
+        $invalidateForPeriod = $period ? $period->getId() : false;
+
         // In each table, invalidate day/week/month/year containing this date
         $archiveTables = ArchiveTableCreator::getTablesArchivesInstalled();
         foreach ($archiveTables as $table) {
@@ -147,15 +162,23 @@ class API extends \Piwik\Plugin\API
             $sql = $bind = array();
             $datesToDeleteInTable = array_unique($datesToDeleteInTable);
             foreach ($datesToDeleteInTable as $dateToDelete) {
-                $sql[] = '(date1 <= ? AND ? <= date2)';
+                $sql[] = '(date1 <= ? AND ? <= date2 AND name LIKE \'done%\')';
                 $bind[] = $dateToDelete;
                 $bind[] = $dateToDelete;
             }
             $sql = implode(" OR ", $sql);
 
-            $query = "DELETE FROM $table " .
+            $sqlPeriod = "";
+            if($invalidateForPeriod) {
+                $sqlPeriod = " AND period = ? ";
+                $bind[] = $invalidateForPeriod;
+            }
+
+            $query = "UPDATE $table " .
+                " SET value = " . ArchiveWriter::DONE_INVALIDATED .
                 " WHERE ( $sql ) " .
-                " AND idsite IN (" . implode(",", $idSites) . ")";
+                " AND idsite IN (" . implode(",", $idSites) . ")" .
+                $sqlPeriod;
             Db::query($query, $bind);
         }
         \Piwik\Plugins\SitesManager\API::getInstance()->updateSiteCreatedTime($idSites, $minDate);
@@ -188,7 +211,7 @@ class API extends \Piwik\Plugin\API
      * @ignore
      * @return mixed
      */
-    static public function getWebsiteIdsToInvalidate()
+    public static function getWebsiteIdsToInvalidate()
     {
         Piwik::checkUserHasSomeAdminAccess();
 
@@ -203,4 +226,15 @@ class API extends \Piwik\Plugin\API
         return array();
     }
 
+    /**
+     * Return true if plugin is activated, false otherwise
+     *
+     * @param string $pluginName
+     * @return bool
+     */
+    public function isPluginActivated($pluginName)
+    {
+        Piwik::checkUserHasSomeViewAccess();
+        return \Piwik\Plugin\Manager::getInstance()->isPluginActivated($pluginName);
+    }
 }

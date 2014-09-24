@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -94,7 +94,7 @@ class PeriodTest extends PHPUnit_Framework_TestCase
     public function testFactoryInvalid()
     {
         try {
-            $period = Period\Factory::build('inValid', Date::today());
+            Period\Factory::build('inValid', Date::today());
         } catch (Exception $e) {
             return;
         }

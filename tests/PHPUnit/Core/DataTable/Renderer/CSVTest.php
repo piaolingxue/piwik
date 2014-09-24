@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -89,7 +89,6 @@ class DataTable_Renderer_CSVTest extends PHPUnit_Framework_TestCase
         $table->addRowsFromArray($array);
         return $table;
     }
-
 
     /**
      * @group Core
@@ -180,6 +179,22 @@ class DataTable_Renderer_CSVTest extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * @group Core
+     */
+    public function testCSVRendererCorrectlyEscapesHeadersAndValues()
+    {
+        $dataTable = $this->_getDataTableSimpleWithCommasInCells();
+        $render = new Csv();
+        $render->setTable($dataTable);
+        $render->convertToUnicode = false;
+
+        $expected = '"col,1","col,2"
+"val""1","val"",2"';
+        $actual = $render->render();
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
      * DATA OF DATATABLE_ARRAY
      * -------------------------
      */
@@ -196,7 +211,6 @@ class DataTable_Renderer_CSVTest extends PHPUnit_Framework_TestCase
         $table1 = new DataTable();
         $table1->addRowsFromArray($array1);
 
-
         $array2 = array(
             array(Row::COLUMNS  => array('label' => 'Google1&copy;', 'nb_uniq_visitors' => 110, 'nb_visits' => 110,),
                   Row::METADATA => array('url' => 'http://www.google.com1', 'logo' => './plugins/Referrers/images/searchEngines/www.google.com.png1'),
@@ -209,7 +223,6 @@ class DataTable_Renderer_CSVTest extends PHPUnit_Framework_TestCase
         $table2->addRowsFromArray($array2);
 
         $table3 = new DataTable();
-
 
         $table = new DataTable\Map();
         $table->setKeyName('testKey');
@@ -442,5 +455,14 @@ b,d,f,g';
         $expected = 'b';
 
         $this->assertEquals($expected, $render->render());
+    }
+
+    private function _getDataTableSimpleWithCommasInCells()
+    {
+        $table = new DataTable();
+        $table->addRowsFromSimpleArray(array(
+            array("col,1" => "val\"1", "col,2" => "val\",2")
+        ));
+        return $table;
     }
 }

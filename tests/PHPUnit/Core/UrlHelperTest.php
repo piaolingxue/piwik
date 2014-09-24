@@ -2,7 +2,7 @@
 use Piwik\UrlHelper;
 
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -177,14 +177,11 @@ class Core_UrlHelperTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($expected, UrlHelper::getLossyUrl($input));
     }
 
-
-
     private function includeDataFilesForSearchEngineTest()
     {
         include "DataFiles/SearchEngines.php";
         include "DataFiles/Countries.php";
     }
-
 
     /**
      * @group Core

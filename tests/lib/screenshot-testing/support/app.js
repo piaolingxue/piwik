@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * UI screenshot test runner Application class
  *
@@ -96,6 +96,7 @@ Application.prototype.loadTestModules = function () {
 
     plugins.forEach(function (pluginPath) {
         walk(path.join(pluginPath, 'Test'), /_spec\.js$/, modulePaths);
+        walk(path.join(pluginPath, 'tests'), /_spec\.js$/, modulePaths);
     });
 
     modulePaths.forEach(function (path) {
@@ -199,16 +200,14 @@ Application.prototype.doRunTests = function () {
         }
 
         // build diffviewer
-        self.diffViewerGenerator.checkImageMagickCompare(function () {
-            self.diffViewerGenerator.generate(function () {
-                self.finish();
-            });
+        self.diffViewerGenerator.generate(function () {
+            self.finish();
         });
     });
 };
 
 Application.prototype.finish = function () {
-    phantom.exit(this.runner.failures);
+    phantom.exit(this.runner ? this.runner.failures : -1);
 };
 
 exports.Application = new Application();

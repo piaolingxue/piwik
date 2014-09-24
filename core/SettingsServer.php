@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -19,7 +19,7 @@ class SettingsServer
      * Returns true if the current script execution was triggered by the cron archiving script.
      *
      * Helpful for error handling: directly throw error without HTML (eg. when DB is down).
-     * 
+     *
      * @return bool
      * @api
      */
@@ -39,7 +39,6 @@ class SettingsServer
     {
         return !empty($GLOBALS['PIWIK_TRACKER_MODE']);
     }
-
 
     /**
      * Returns `true` if running on Microsoft IIS 7 (or above), `false` if otherwise.
@@ -102,7 +101,7 @@ class SettingsServer
 
     /**
      * Returns `true` if the GD PHP extension is available, `false` if otherwise.
-     * 
+     *
      * _Note: ImageGraph and the sparkline report visualization depend on the GD extension._
      *
      * @return bool

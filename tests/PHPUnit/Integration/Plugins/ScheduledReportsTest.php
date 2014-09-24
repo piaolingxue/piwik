@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,6 +9,8 @@ use Piwik\Access;
 use Piwik\Plugins\MobileMessaging\API as APIMobileMessaging;
 use Piwik\Plugins\MobileMessaging\MobileMessaging;
 use Piwik\Plugins\ScheduledReports\API as APIScheduledReports;
+use Piwik\Plugins\ScheduledReports\Menu;
+use Piwik\Plugins\ScheduledReports\Tasks;
 use Piwik\Plugins\ScheduledReports\ScheduledReports;
 use Piwik\Plugins\SitesManager\API as APISitesManager;
 use Piwik\ScheduledTask;
@@ -201,9 +203,9 @@ class Plugins_ScheduledReportsTest extends DatabaseTestCase
         // unload MobileMessaging plugin
         \Piwik\Plugin\Manager::getInstance()->loadPlugins(array('ScheduledReports'));
 
-        $pdfReportPlugin = new ScheduledReports();
+        $pdfReportPlugin = new Menu();
         $this->assertEquals(
-            ScheduledReports::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY,
+            Menu::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY,
             $pdfReportPlugin->getTopMenuTranslationKey()
         );
     }
@@ -217,9 +219,9 @@ class Plugins_ScheduledReportsTest extends DatabaseTestCase
         FakeAccess::$identity = 'anonymous';
         Access::setSingletonInstance($anonymousAccess);
 
-        $pdfReportPlugin = new ScheduledReports();
+        $pdfReportPlugin = new Menu();
         $this->assertEquals(
-            ScheduledReports::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY,
+            Menu::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY,
             $pdfReportPlugin->getTopMenuTranslationKey()
         );
     }
@@ -236,9 +238,9 @@ class Plugins_ScheduledReportsTest extends DatabaseTestCase
         self::setSuperUser();
         APIMobileMessaging::getInstance()->setSMSAPICredential('StubbedProvider', '');
 
-        $pdfReportPlugin = new ScheduledReports();
+        $pdfReportPlugin = new Menu();
         $this->assertEquals(
-            ScheduledReports::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY,
+            Menu::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY,
             $pdfReportPlugin->getTopMenuTranslationKey()
         );
     }
@@ -251,9 +253,9 @@ class Plugins_ScheduledReportsTest extends DatabaseTestCase
      */
     public function testGetTopMenuTranslationKeyNoReportMobileAccountKO()
     {
-        $pdfReportPlugin = new ScheduledReports();
+        $pdfReportPlugin = new Menu();
         $this->assertEquals(
-            ScheduledReports::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY,
+            Menu::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY,
             $pdfReportPlugin->getTopMenuTranslationKey()
         );
     }
@@ -279,9 +281,9 @@ class Plugins_ScheduledReportsTest extends DatabaseTestCase
             )
         );
 
-        $pdfReportPlugin = new ScheduledReports();
+        $pdfReportPlugin = new Menu();
         $this->assertEquals(
-            ScheduledReports::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY,
+            Menu::MOBILE_MESSAGING_TOP_MENU_TRANSLATION_KEY,
             $pdfReportPlugin->getTopMenuTranslationKey()
         );
     }
@@ -300,9 +302,9 @@ class Plugins_ScheduledReportsTest extends DatabaseTestCase
 
         self::addReport(self::getMonthlyEmailReportData($this->idSite));
 
-        $pdfReportPlugin = new ScheduledReports();
+        $pdfReportPlugin = new Menu();
         $this->assertEquals(
-            ScheduledReports::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY,
+            Menu::PDF_REPORTS_TOP_MENU_TRANSLATION_KEY,
             $pdfReportPlugin->getTopMenuTranslationKey()
         );
     }
@@ -382,9 +384,9 @@ class Plugins_ScheduledReportsTest extends DatabaseTestCase
             new ScheduledTask (APIScheduledReports::getInstance(), 'sendReport', 5, $scheduleTask4),
         );
 
-        $pdfReportPlugin = new ScheduledReports();
-        $tasks = array();
-        $pdfReportPlugin->getScheduledTasks($tasks);
+        $pdfReportPlugin = new Tasks();
+        $pdfReportPlugin->schedule();
+        $tasks = $pdfReportPlugin->getScheduledTasks();
         $this->assertEquals($expectedTasks, $tasks);
 
         \Piwik\Plugins\ScheduledReports\API::unsetInstance();

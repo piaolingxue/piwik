@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,6 +14,7 @@ use Piwik\API\Request;
 use Piwik\Common;
 use Piwik\Config;
 use Piwik\Piwik;
+use Piwik\Url;
 use Piwik\View;
 
 /**
@@ -27,6 +28,7 @@ class Controller extends \Piwik\Plugin\Controller
         if (!isset($_GET['filter_limit'])) {
             $_GET['filter_limit'] = Config::getInstance()->General['API_datatable_default_limit'];
         }
+
         $request = new Request('token_auth=' . Common::getRequestVar('token_auth', 'anonymous', 'string'));
         return $request->process();
     }

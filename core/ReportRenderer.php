@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,12 +14,13 @@ use Piwik\DataTable\Row;
 use Piwik\DataTable\Simple;
 use Piwik\DataTable;
 use Piwik\Plugins\ImageGraph\API;
+use Piwik\BaseFactory;
 
 /**
  * A Report Renderer produces user friendly renderings of any given Piwik report.
  * All new Renderers must be copied in ReportRenderer and added to the $availableReportRenderers.
  */
-abstract class ReportRenderer
+abstract class ReportRenderer extends BaseFactory
 {
     const DEFAULT_REPORT_FONT = 'dejavusans';
     const REPORT_TEXT_COLOR = "68,68,68";
@@ -33,38 +34,28 @@ abstract class ReportRenderer
     const PDF_FORMAT = 'pdf';
     const CSV_FORMAT = 'csv';
 
-    static private $availableReportRenderers = array(
+    private static $availableReportRenderers = array(
         self::PDF_FORMAT,
         self::HTML_FORMAT,
         self::CSV_FORMAT,
     );
 
-    /**
-     * Return the ReportRenderer associated to the renderer type $rendererType
-     *
-     * @throws exception If the renderer is unknown
-     * @param string $rendererType
-     * @return \Piwik\ReportRenderer
-     */
-    static public function factory($rendererType)
+    protected static function getClassNameFromClassId($rendererType)
     {
-        $name = ucfirst(strtolower($rendererType));
-        $className = 'Piwik\ReportRenderer\\' . $name;
+        return 'Piwik\ReportRenderer\\' . self::normalizeRendererType($rendererType);
+    }
 
-        try {
-            Loader::loadClass($className);
-            return new $className;
-        } catch (Exception $e) {
+    protected static function getInvalidClassIdExceptionMessage($rendererType)
+    {
+        return Piwik::translate(
+            'General_ExceptionInvalidReportRendererFormat',
+            array(self::normalizeRendererType($rendererType), implode(', ', self::$availableReportRenderers))
+        );
+    }
 
-            @header('Content-Type: text/html; charset=utf-8');
-
-            throw new Exception(
-                Piwik::translate(
-                    'General_ExceptionInvalidReportRendererFormat',
-                    array($name, implode(', ', self::$availableReportRenderers))
-                )
-            );
-        }
+    protected static function normalizeRendererType($rendererType)
+    {
+        return ucfirst(strtolower($rendererType));
     }
 
     /**
@@ -120,6 +111,16 @@ abstract class ReportRenderer
      * @param array $processedReport @see API::getProcessedReport()
      */
     abstract public function renderReport($processedReport);
+
+    /**
+     * Get report attachments, ex. graph images
+     *
+     * @param $report
+     * @param $processedReports
+     * @param $prettyDate
+     * @return array
+     */
+    abstract public function getAttachments($report, $processedReports, $prettyDate);
 
     /**
      * Append $extension to $filename

@@ -1,11 +1,12 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 use Piwik\Db;
+use Piwik\Tests\Fixture;
 
 /**
  * Tests extending DatabaseTestCase are much slower to run: the setUp will
@@ -17,6 +18,9 @@ use Piwik\Db;
  */
 class DatabaseTestCase extends PHPUnit_Framework_TestCase
 {
+    /**
+     * @var Fixture
+     */
     protected $fixture = null;
 
     /**

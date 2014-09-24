@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -57,11 +57,12 @@ class DataArray
      *
      * @return array
      */
-    static public function makeEmptyRow()
+    public static function makeEmptyRow()
     {
         return array(Metrics::INDEX_NB_UNIQ_VISITORS    => 0,
                      Metrics::INDEX_NB_VISITS           => 0,
                      Metrics::INDEX_NB_ACTIONS          => 0,
+                     Metrics::INDEX_NB_USERS            => 0,
                      Metrics::INDEX_MAX_ACTIONS         => 0,
                      Metrics::INDEX_SUM_VISIT_LENGTH    => 0,
                      Metrics::INDEX_BOUNCE_COUNT        => 0,
@@ -90,6 +91,7 @@ class DataArray
             if ($onlyMetricsAvailableInActionsTable) {
                 return;
             }
+            $oldRowToUpdate[Metrics::INDEX_NB_USERS] += $newRowToAdd['nb_users'];
             $oldRowToUpdate[Metrics::INDEX_MAX_ACTIONS] = (float)max($newRowToAdd['max_actions'], $oldRowToUpdate[Metrics::INDEX_MAX_ACTIONS]);
             $oldRowToUpdate[Metrics::INDEX_SUM_VISIT_LENGTH] += $newRowToAdd['sum_visit_length'];
             $oldRowToUpdate[Metrics::INDEX_BOUNCE_COUNT] += $newRowToAdd['bounce_count'];
@@ -116,6 +118,7 @@ class DataArray
             }
         }
 
+        $oldRowToUpdate[Metrics::INDEX_NB_USERS] += $newRowToAdd[Metrics::INDEX_NB_USERS];
         $oldRowToUpdate[Metrics::INDEX_MAX_ACTIONS] = (float)max($newRowToAdd[Metrics::INDEX_MAX_ACTIONS], $oldRowToUpdate[Metrics::INDEX_MAX_ACTIONS]);
         $oldRowToUpdate[Metrics::INDEX_SUM_VISIT_LENGTH] += $newRowToAdd[Metrics::INDEX_SUM_VISIT_LENGTH];
         $oldRowToUpdate[Metrics::INDEX_BOUNCE_COUNT] += $newRowToAdd[Metrics::INDEX_BOUNCE_COUNT];
@@ -195,7 +198,7 @@ class DataArray
         $this->doSumVisitsMetrics($row, $this->data[$label], $onlyMetricsAvailableInActionsTable = true);
     }
 
-    static protected function makeEmptyActionRow()
+    protected static function makeEmptyActionRow()
     {
         return array(
             Metrics::INDEX_NB_UNIQ_VISITORS => 0,
@@ -212,7 +215,7 @@ class DataArray
         $this->doSumEventsMetrics($row, $this->data[$label], $onlyMetricsAvailableInActionsTable = true);
     }
 
-    static protected function makeEmptyEventRow()
+    protected static function makeEmptyEventRow()
     {
         return array(
             Metrics::INDEX_NB_UNIQ_VISITORS         => 0,
@@ -332,7 +335,7 @@ class DataArray
      */
     protected function enrichWithConversions(&$data)
     {
-        foreach ($data as $label => &$values) {
+        foreach ($data as &$values) {
             if (!isset($values[Metrics::INDEX_GOALS])) {
                 continue;
             }
@@ -369,7 +372,7 @@ class DataArray
      * @param $row
      * @return bool
      */
-    static public function isRowActions($row)
+    public static function isRowActions($row)
     {
         return (count($row) == count(self::makeEmptyActionRow())) && isset($row[Metrics::INDEX_NB_ACTIONS]);
     }

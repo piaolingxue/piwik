@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,8 @@
 
 use Piwik\CliMulti;
 use Piwik\Version;
+use Piwik\Tests\IntegrationTestCase;
+use Piwik\Tests\Fixture;
 
 /**
  * Class Core_CliMultiTest
@@ -153,7 +155,7 @@ class Core_CliMultiTest extends IntegrationTestCase
         $response = $this->cliMulti->request($urls);
 
         $message = "Response was: " . substr( implode("\n\n", $response), 0, 4000);
-        $this->assertTrue(false !== strpos($response[0], '<meta name="generator" content="Piwik - Open Source Web Analytics"/>'), $message);
+        $this->assertTrue(false !== strpos($response[0], '<meta name="generator" content="Piwik - free/libre analytics platform"/>'), $message);
         $this->assertTrue(false !== strpos($response[0], 'Widgetize the full dashboard'). $message);
     }
 

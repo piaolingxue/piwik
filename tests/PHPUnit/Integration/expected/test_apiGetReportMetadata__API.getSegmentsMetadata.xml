@@ -159,6 +159,14 @@
 	<row>
 		<type>dimension</type>
 		<category>Visit</category>
+		<name>User ID</name>
+		<segment>userId</segment>
+		<acceptedValues>any non empty unique string identifying the user (such as an email address or a username).</acceptedValues>
+		<permission>1</permission>
+	</row>
+	<row>
+		<type>dimension</type>
+		<category>Visit</category>
 		<name>Visit Ecommerce status at the end of the visit</name>
 		<segment>visitEcommerceStatus</segment>
 		<acceptedValues>none, ordered, abandonedCart, orderedThenAbandonedCart. For example, to select all visits that have made an Ecommerce order, the API request would contain &quot;&amp;segment=visitEcommerceStatus==ordered,visitEcommerceStatus==orderedThenAbandonedCart&quot;</acceptedValues>
@@ -225,8 +233,8 @@
 		<type>dimension</type>
 		<category>Referrers</category>
 		<name>Referrer URL</name>
-		<acceptedValues>http%3A%2F%2Fwww.example.org%2Freferer-page.htm</acceptedValues>
 		<segment>referrerUrl</segment>
+		<acceptedValues>http%3A%2F%2Fwww.example.org%2Freferer-page.htm</acceptedValues>
 	</row>
 	<row>
 		<type>dimension</type>
@@ -369,6 +377,27 @@
 	<row>
 		<type>dimension</type>
 		<category>Actions</category>
+		<name>Content Name</name>
+		<segment>contentName</segment>
+		<acceptedValues>The name of a content block, for instance &quot;Ad Sale&quot;</acceptedValues>
+	</row>
+	<row>
+		<type>dimension</type>
+		<category>Actions</category>
+		<name>Content Piece</name>
+		<segment>contentPiece</segment>
+		<acceptedValues>The actual content. For instance &quot;ad.jpg&quot; or &quot;My text ad&quot;</acceptedValues>
+	</row>
+	<row>
+		<type>dimension</type>
+		<category>Actions</category>
+		<name>Content Target</name>
+		<segment>contentTarget</segment>
+		<acceptedValues>For instance the URL of a landing page: &quot;http://landingpage.example.com&quot;</acceptedValues>
+	</row>
+	<row>
+		<type>dimension</type>
+		<category>Actions</category>
 		<name>Entry Page URL</name>
 		<segment>entryPageUrl</segment>
 	</row>
@@ -389,6 +418,13 @@
 		<category>Actions</category>
 		<name>Exit Page URL</name>
 		<segment>exitPageUrl</segment>
+	</row>
+	<row>
+		<type>dimension</type>
+		<category>Actions</category>
+		<name>Interaction</name>
+		<segment>contentInteraction</segment>
+		<acceptedValues>The type of interaction with the content. For instance &quot;click&quot; or &quot;submit&quot;.</acceptedValues>
 	</row>
 	<row>
 		<type>dimension</type>

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -16,7 +16,7 @@ use Piwik\Metrics;
 
 /**
  * Sorts a {@link DataTable} based on the value of a specific column.
- * 
+ *
  * It is possible to specify a natural sorting (see [php.net/natsort](http://php.net/natsort) for details).
  *
  * @api
@@ -28,7 +28,7 @@ class Sort extends BaseFilter
 
     /**
      * Constructor.
-     * 
+     *
      * @param DataTable $table The table to eventually filter.
      * @param string $columnToSort The name of the column to sort by.
      * @param string $order order `'asc'` or `'desc'`.
@@ -248,7 +248,6 @@ class Sort extends BaseFilter
                 $methodToUse = "sortString";
             }
         }
-
         $table->sort(array($this, $methodToUse), $this->columnToSort);
     }
 }

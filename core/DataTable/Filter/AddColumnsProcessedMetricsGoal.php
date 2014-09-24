@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -19,6 +19,7 @@ use Piwik\Tracker\GoalManager;
  * Adds goal related metrics to a {@link DataTable} using metrics that already exist.
  *
  * Metrics added are:
+ *
  * - **revenue_per_visit**: total goal and ecommerce revenue / nb_visits
  * - **goal_%idGoal%_conversion_rate**: the conversion rate. There will be one of
  *                                      these columns for each goal that exists
@@ -37,17 +38,17 @@ use Piwik\Tracker\GoalManager;
  *                                        reports.
  * - **goal_%idGoal%_items**: number of items. Only for ecommerce order and abandoned cart
  *                            reports.
- * 
+ *
  * Adding the **filter_update_columns_when_show_all_goals** query parameter to
  * an API request will trigger the execution of this Filter.
- * 
+ *
  * _Note: This filter must be called before {@link ReplaceColumnNames} is called._
- * 
+ *
  * **Basic usage example**
- * 
+ *
  *     $dataTable->filter('AddColumnsProcessedMetricsGoal',
  *         array($enable = true, $idGoal = Piwik::LABEL_ID_GOAL_IS_ECOMMERCE_ORDER));
- * 
+ *
  * @api
  */
 class AddColumnsProcessedMetricsGoal extends AddColumnsProcessedMetrics
@@ -71,7 +72,7 @@ class AddColumnsProcessedMetricsGoal extends AddColumnsProcessedMetrics
 
     /**
      * Constructor.
-     * 
+     *
      * @param DataTable $table The table that will eventually filtered.
      * @param bool $enable Always set to true.
      * @param string $processOnlyIdGoal Defines what metrics to add (don't process metrics when you don't display them).

@@ -1,17 +1,20 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link    http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+namespace Piwik\Tests\Fixtures;
+
 use Piwik\Date;
 use Piwik\Plugins\Goals\API;
+use Piwik\Tests\Fixture;
 
 /**
  * Adds one site and tracks a couple conversions.
  */
-class Piwik_Test_Fixture_SomeVisitsAllConversions extends Fixture
+class SomeVisitsAllConversions extends Fixture
 {
     public $dateTime = '2009-01-04 00:11:42';
     public $idSite = 1;
@@ -49,6 +52,19 @@ class Piwik_Test_Fixture_SomeVisitsAllConversions extends Fixture
                 $this->idSite, 'triggered js MULTIPLE ALLOWED', 'manually', '', '', $caseSensitive = false,
                 $revenue = 10, $allowMultipleConversions = true
             );
+        }
+
+        if (!self::goalExists($idSite = 1, $idGoal = 3)) {
+            API::getInstance()->addGoal($this->idSite, 'click event', 'event_action', 'click', 'contains');
+        }
+
+        if (!self::goalExists($idSite = 1, $idGoal = 4)) {
+            API::getInstance()->addGoal($this->idSite, 'category event', 'event_category', 'The_Category', 'exact', true);
+        }
+
+        if (!self::goalExists($idSite = 1, $idGoal = 5)) {
+            // including a few characters that are HTML entitiable
+            API::getInstance()->addGoal($this->idSite, 'name event', 'event_name', '<the_\'"name>', 'exact');
         }
     }
 
@@ -90,5 +106,17 @@ class Piwik_Test_Fixture_SomeVisitsAllConversions extends Fixture
         $t->setTokenAuth($this->getTokenAuth());
         $t->setForceNewVisit();
         $t->doTrackPageView('This is tracked in a new visit.');
+
+        // should trigger two goals at once (event_category, event_action)
+        $t->setForceVisitDateTime(Date::factory($this->dateTime)->addHour(0.3)->getDatetime());
+        self::checkResponse($t->doTrackEvent('The_Category', 'click_action', 'name'));
+
+        // should not trigger a goal (the_category is case senstive goal)
+        $t->setForceVisitDateTime(Date::factory($this->dateTime)->addHour(0.4)->getDatetime());
+        self::checkResponse($t->doTrackEvent('the_category', 'click_action', 'name'));
+
+        // should trigger a goal for event_name, including a few characters that are HTML entitiable
+        $t->setForceVisitDateTime(Date::factory($this->dateTime)->addHour(0.4)->getDatetime());
+        self::checkResponse($t->doTrackEvent('other_category', 'other_action', '<the_\'"name>'));
     }
 }

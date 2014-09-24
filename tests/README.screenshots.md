@@ -11,7 +11,7 @@ Changes made to Piwik that affect the UI (such as changes to CSS, JavaScript, Tw
 break the UI tests build. This is an opportunity to review your code and as a Piwik developer you should ensure that
 any side effects created by your changes are correct.
 
-If they are not correct, determine the cause of the change and fix it in a new commit. If the changes are correct, 
+If they are not correct, determine the cause of the change and fix it in a new commit. If the changes are correct,
 then you should update the expected screenshots accordingly.
 
 **Steps to fix a broken build**
@@ -25,7 +25,7 @@ To fix a broken build, follow these steps:
    like this:
 
        View UI failures (if any) here http://builds-artifacts.piwik.org/ui-tests.master/1837.1/screenshot-diffs/diffviewer.html
-   
+
    Click on the link in the message.
  * The diff viewer will list links to the generated screenshots for failed tests as well as the expected screenshots and image diffs.
  * For each failure, check if the change is desired. Sometimes we introduce regression without realising, and screenshot tests can help us spot such regressions.
@@ -64,7 +64,20 @@ Removing this font may be useful if your generated screenshots' fonts do not mat
 
 ### Configuring screenshot testing library
 
-The screenshot testing library's configuration resides in the tests/lib/screenshot-testing/config.js file. If your development environment's PHP executable isn't named 'php' or your dev Piwik install isn't at http://localhost/, you may need to edit the contents of this file.
+The screenshot testing library's configuration resides in the tests/lib/screenshot-testing/config.js file.
+If your development environment's PHP executable isn't named `php`
+or your dev Piwik install isn't at `http://localhost/` you may need to edit the contents of this file.
+
+For example if Piwik is setup at `http://localhost/piwik` modify the config.js such as:
+```
+exports.piwikUrl = "http://localhost/piwik/";
+exports.phpServer = {
+    HTTP_HOST: 'localhost',
+    REQUEST_URI: '/piwik/',
+    REMOTE_ADDR: '127.0.0.1'
+};
+
+```
 
 ## Running Tests
 
@@ -136,7 +149,21 @@ If you want to compare a screenshot against an already existing expected screens
         }, done);
     });
 
-`"OptionalPrefix"` will default to the name of the test.
+If you want to compare only parts (all content within an element / selector) of a page you can do the following:
+
+    it("should load correctly", function (done) {
+        expect.screenshot("screenshot_name").to.be.captureSelector("#content", function (page) {
+            page.load(url);
+        }, done);
+    });
+
+If you want to compare a screenshot against an already existing expected screenshot and capture a selector you can do the following:
+
+    it("should load correctly", function (done) {
+        expect.screenshot("screenshot_name").to.be.captureSelector("processed_screenshot_name", "#content", function (page) {
+            page.load(url);
+        }, done);
+    });
 
 ### Manipulating Pages Before Capture
 
@@ -206,7 +233,7 @@ The following are examples of test environment manipulation:
  * [Dashboard_spec.js](https://github.com/piwik/piwik-ui-tests/blob/master/specs/Dashboard_spec.js)
  * [Login_spec.js](https://github.com/piwik/piwik-ui-tests/blob/master/specs/Login_spec.js)
 
-## Learn more 
+## Learn more
 
 Check out this blog post to learn more about Screenshot Tests in Piwik:
 [QA Screenshot Testing blog post](http://piwik.org/blog/2013/10/our-latest-improvement-to-qa-screenshot-testing/)

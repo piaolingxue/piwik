@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+sudo apt-get update
+
 # Install XMLStarlet
 sudo apt-get install -qq xmlstarlet
 
@@ -13,7 +15,7 @@ fi
 
 # Copy Piwik configuration
 echo "Install config.ini.php"
-sed "s/PDO_MYSQL/${MYSQL_ADAPTER}/g" ./tests/PHPUnit/config.ini.travis.php > ./config/config.ini.php
+sed "s/PDO\\\MYSQL/${MYSQL_ADAPTER}/g" ./tests/PHPUnit/config.ini.travis.php > ./config/config.ini.php
 
 # Prepare phpunit.xml
 echo "Adjusting phpunit.xml"

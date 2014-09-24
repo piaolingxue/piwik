@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,13 +13,13 @@ use Piwik\DataTable\BaseFilter;
 
 /**
  * Adds a new column to every row of a {@link DataTable} based on the result of callback.
- * 
+ *
  * **Basic usage example**
- * 
+ *
  *     $callback = function ($visits, $timeSpent) {
  *         return round($timeSpent / $visits, 2);
  *     };
- *     
+ *
  *     $dataTable->filter('ColumnCallbackAddColumn', array(array('nb_visits', 'sum_time_spent'), 'avg_time_on_site', $callback));
  *
  * @api
@@ -93,7 +93,7 @@ class ColumnCallbackAddColumn extends BaseFilter
                 }
 
                 $parameters = array_merge($columnValues, $functionParams);
-                
+
                 return call_user_func_array($functionToApply, $parameters);
             });
 

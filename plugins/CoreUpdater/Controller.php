@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -46,7 +46,7 @@ class Controller extends \Piwik\Plugin\Controller
     private $pathPiwikZip = false;
     private $newVersion;
 
-    static protected function getLatestZipUrl($newVersion)
+    protected static function getLatestZipUrl($newVersion)
     {
         if (@Config::getInstance()->Debug['allow_upgrades_to_beta']) {
             return 'http://builds.piwik.org/piwik-' . $newVersion . '.zip';
@@ -134,7 +134,6 @@ class Controller extends \Piwik\Plugin\Controller
         return $view->render();
     }
 
-
     public function oneClickResults()
     {
         $view = new View('@CoreUpdater/oneClickResults');
@@ -153,17 +152,6 @@ class Controller extends \Piwik\Plugin\Controller
             && empty($this->deactivatedPlugins)
         ) {
             Piwik::redirectToModule('CoreHome');
-        }
-    }
-
-    protected static function clearPhpCaches()
-    {
-        if (function_exists('apc_clear_cache')) {
-            apc_clear_cache(); // clear the system (aka 'opcode') cache
-        }
-
-        if (function_exists('opcache_reset')) {
-            opcache_reset(); // reset the opcode cache (php 5.5.0+)
         }
     }
 
@@ -253,11 +241,14 @@ class Controller extends \Piwik\Plugin\Controller
             @chmod($this->pathRootExtractedPiwik . '/misc/cron/archive.sh', 0755);
         }
 
+        $model = new Model();
+
         /*
          * Copy all files to PIWIK_INCLUDE_PATH.
          * These files are accessed through the dispatcher.
          */
         Filesystem::copyRecursive($this->pathRootExtractedPiwik, PIWIK_INCLUDE_PATH);
+        $model->removeGoneFiles($this->pathRootExtractedPiwik, PIWIK_INCLUDE_PATH);
 
         /*
          * These files are visible in the web root and are generally
@@ -281,6 +272,7 @@ class Controller extends \Piwik\Plugin\Controller
              * Copy the non-PHP files (e.g., images, css, javascript)
              */
             Filesystem::copyRecursive($this->pathRootExtractedPiwik, PIWIK_DOCUMENT_ROOT, true);
+            $model->removeGoneFiles($this->pathRootExtractedPiwik, PIWIK_DOCUMENT_ROOT);
         }
 
         /*
@@ -292,7 +284,7 @@ class Controller extends \Piwik\Plugin\Controller
 
         Filesystem::unlinkRecursive($this->pathRootExtractedPiwik, true);
 
-        self::clearPhpCaches();
+        Filesystem::clearPhpCaches();
     }
 
     private function oneClick_Finished()
@@ -379,6 +371,7 @@ class Controller extends \Piwik\Plugin\Controller
         $view->new_piwik_version = Version::VERSION;
         $view->commandUpgradePiwik = "<br /><code>php " . Filesystem::getPathToPiwikRoot() . "/console core:update </code>";
         $pluginNamesToUpdate = array();
+        $dimensionsToUpdate = array();
         $coreToUpdate = false;
 
         // handle case of existing database with no tables
@@ -397,6 +390,8 @@ class Controller extends \Piwik\Plugin\Controller
             foreach ($componentsWithUpdateFile as $name => $filenames) {
                 if ($name == 'core') {
                     $coreToUpdate = true;
+                } elseif (0 === strpos($name, 'log_')) {
+                    $dimensionsToUpdate[] = $name;
                 } else {
                     $pluginNamesToUpdate[] = $name;
                 }
@@ -418,6 +413,7 @@ class Controller extends \Piwik\Plugin\Controller
         $view->errorMessages = $this->errorMessages;
         $view->current_piwik_version = $currentVersion;
         $view->pluginNamesToUpdate = $pluginNamesToUpdate;
+        $view->dimensionsToUpdate = $dimensionsToUpdate;
         $view->coreToUpdate = $coreToUpdate;
     }
 

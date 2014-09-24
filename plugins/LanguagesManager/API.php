@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,6 +13,7 @@ use Piwik\Common;
 use Piwik\Db;
 use Piwik\Filesystem;
 use Piwik\Piwik;
+use Piwik\Plugin\Manager as PluginManager;
 
 /**
  * The LanguagesManager API lets you access existing Piwik translations, and change Users languages preferences.
@@ -90,7 +91,7 @@ class API extends \Piwik\Plugin\API
 
         // merge with plugin translations if any
         $pluginFiles = glob(sprintf('%s/plugins/*/lang/en.json', PIWIK_INCLUDE_PATH));
-        foreach ($pluginFiles AS $file) {
+        foreach ($pluginFiles as $file) {
 
             $data = file_get_contents($file);
             $pluginTranslations = json_decode($data, true);
@@ -105,7 +106,7 @@ class API extends \Piwik\Plugin\API
 
             // merge with plugin translations if any
             $pluginFiles = glob(sprintf('%s/plugins/*/lang/%s.json', PIWIK_INCLUDE_PATH, $filename));
-            foreach ($pluginFiles AS $file) {
+            foreach ($pluginFiles as $file) {
 
                 $data = file_get_contents($file);
                 $pluginTranslations = json_decode($data, true);
@@ -171,6 +172,17 @@ class API extends \Piwik\Plugin\API
                 );
             }
         }
+
+        foreach (PluginManager::getInstance()->getLoadedPluginsName() as $pluginName) {
+            $translations = $this->getPluginTranslationsForLanguage($pluginName, $languageCode);
+
+            if (!empty($translations)) {
+                foreach ($translations as $keys) {
+                    $languageInfo[] = $keys;
+                }
+            }
+        }
+
         return $languageInfo;
     }
 

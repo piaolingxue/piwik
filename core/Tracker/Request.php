@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -28,8 +28,6 @@ class Request
      * @var array
      */
     protected $params;
-
-    protected $forcedVisitorId = false;
 
     protected $isAuthenticated = null;
 
@@ -277,6 +275,7 @@ class Request
             'cip'          => array(false, 'string'),
             'cdt'          => array(false, 'string'),
             'cid'          => array(false, 'string'),
+            'uid'          => array(false, 'string'),
 
             // Actions / pages
             'cs'           => array(false, 'string'),
@@ -287,6 +286,12 @@ class Request
             'search_cat'   => array(false, 'string'),
             'search_count' => array(-1, 'int'),
             'gt_ms'        => array(-1, 'int'),
+
+            // Content
+            'c_p'          => array('', 'string'),
+            'c_n'          => array('', 'string'),
+            'c_t'          => array('', 'string'),
+            'c_i'          => array('', 'string'),
         );
 
         if (!isset($supportedParams[$name])) {
@@ -298,6 +303,11 @@ class Request
         $value = Common::getRequestVar($name, $paramDefaultValue, $paramType, $this->params);
 
         return $value;
+    }
+
+    public function getParams()
+    {
+        return $this->params;
     }
 
     public function getCurrentTimestamp()
@@ -317,10 +327,10 @@ class Request
 
         /**
          * Triggered when obtaining the ID of the site we are tracking a visit for.
-         * 
+         *
          * This event can be used to change the site ID so data is tracked for a different
          * website.
-         * 
+         *
          * @param int &$idSite Initialized to the value of the **idsite** query parameter. If a
          *                     subscriber sets this variable, the value it uses must be greater
          *                     than 0.
@@ -431,21 +441,37 @@ class Request
     }
 
     /**
-     * Is the request for a known VisitorId, based on 1st party, 3rd party (optional) cookies or Tracking API forced Visitor ID
+     * Returns the ID from  the request in this order:
+     * return from a given User ID,
+     * or from a Tracking API forced Visitor ID,
+     * or from a Visitor ID from 3rd party (optional) cookies,
+     * or from a given Visitor Id from 1st party?
+     *
      * @throws Exception
      */
     public function getVisitorId()
     {
         $found = false;
 
-        // Was a Visitor ID "forced" (@see Tracking API setVisitorId()) for this request?
-        $idVisitor = $this->getForcedVisitorId();
-        if (!empty($idVisitor)) {
-            if (strlen($idVisitor) != Tracker::LENGTH_HEX_ID_STRING) {
-                throw new Exception("Visitor ID (cid) $idVisitor must be " . Tracker::LENGTH_HEX_ID_STRING . " characters long");
-            }
-            Common::printDebug("Request will be recorded for this idvisitor = " . $idVisitor);
+        // If User ID is set it takes precedence
+        $userId = $this->getForcedUserId();
+        if($userId) {
+            $userIdHashed = $this->getUserIdHashed($userId);
+            $idVisitor = $this->truncateIdAsVisitorId($userIdHashed);
+            Common::printDebug("Request will be recorded for this user_id = " . $userId . " (idvisitor = $idVisitor)");
             $found = true;
+        }
+
+        // Was a Visitor ID "forced" (@see Tracking API setVisitorId()) for this request?
+        if (!$found) {
+            $idVisitor = $this->getForcedVisitorId();
+            if (!empty($idVisitor)) {
+                if (strlen($idVisitor) != Tracker::LENGTH_HEX_ID_STRING) {
+                    throw new Exception("Visitor ID (cid) $idVisitor must be " . Tracker::LENGTH_HEX_ID_STRING . " characters long");
+                }
+                Common::printDebug("Request will be recorded for this idvisitor = " . $idVisitor);
+                $found = true;
+            }
         }
 
         // - If set to use 3rd party cookies for Visit ID, read the cookie
@@ -462,6 +488,7 @@ class Request
                 }
             }
         }
+
         // If a third party cookie was not found, we default to the first party cookie
         if (!$found) {
             $idVisitor = Common::getRequestVar('_id', '', 'string', $this->params);
@@ -469,7 +496,7 @@ class Request
         }
 
         if ($found) {
-            $truncated = substr($idVisitor, 0, Tracker::LENGTH_HEX_ID_STRING);
+            $truncated = $this->truncateIdAsVisitorId($idVisitor);
             $binVisitorId = @Common::hex2bin($truncated);
             if (!empty($binVisitorId)) {
                 return $binVisitorId;
@@ -506,41 +533,18 @@ class Request
         }
     }
 
-    public function setForcedVisitorId($visitorId)
+    public function getForcedUserId()
     {
-        if (!empty($visitorId)) {
-            $this->forcedVisitorId = $visitorId;
+        $userId = $this->getParam('uid');
+        if(strlen($userId) > 0) {
+            return $userId;
         }
+        return null;
     }
 
     public function getForcedVisitorId()
     {
-        return $this->forcedVisitorId;
-    }
-
-    public function overrideLocation(&$visitorInfo)
-    {
-        if (!$this->isAuthenticated()) {
-            return;
-        }
-
-        // check for location override query parameters (ie, lat, long, country, region, city)
-        static $locationOverrideParams = array(
-            'country' => array('string', 'location_country'),
-            'region'  => array('string', 'location_region'),
-            'city'    => array('string', 'location_city'),
-            'lat'     => array('float', 'location_latitude'),
-            'long'    => array('float', 'location_longitude'),
-        );
-        foreach ($locationOverrideParams as $queryParamName => $info) {
-            list($type, $visitorInfoKey) = $info;
-
-            $value = Common::getRequestVar($queryParamName, false, $type, $this->params);
-            if (!empty($value)) {
-                $visitorInfo[$visitorInfoKey] = $value;
-            }
-        }
-        return;
+        return $this->getParam('cid');
     }
 
     public function getPlugins()
@@ -569,5 +573,25 @@ class Request
             return (int)$generationTime;
         }
         return false;
+    }
+
+    /**
+     * @param $idVisitor
+     * @return string
+     */
+    private function truncateIdAsVisitorId($idVisitor)
+    {
+        return substr($idVisitor, 0, Tracker::LENGTH_HEX_ID_STRING);
+    }
+
+    /**
+     * Matches implementation of PiwikTracker::getUserIdHashed
+     *
+     * @param $userId
+     * @return string
+     */
+    private function getUserIdHashed($userId)
+    {
+        return sha1($userId);
     }
 }

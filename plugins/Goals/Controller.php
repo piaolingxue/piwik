@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -470,34 +470,5 @@ class Controller extends \Piwik\Plugin\Controller
         }
 
         return $goalReportsByDimension->render();
-    }
-
-    //
-    // Report rendering actions
-    //
-
-    public function getItemsSku()
-    {
-        return $this->renderReport(__FUNCTION__);
-    }
-
-    public function getItemsName()
-    {
-        return $this->renderReport(__FUNCTION__);
-    }
-
-    public function getItemsCategory()
-    {
-        return $this->renderReport(__FUNCTION__);
-    }
-
-    public function getVisitsUntilConversion()
-    {
-        return $this->renderReport(__FUNCTION__);
-    }
-
-    public function getDaysToConversion()
-    {
-        return $this->renderReport(__FUNCTION__);
     }
 }

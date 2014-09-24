@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -52,6 +52,14 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
         $pseudoMockAccess = new FakeAccess;
         FakeAccess::$superUser = true;
         Access::setSingletonInstance($pseudoMockAccess);
+
+        ArchiveTableCreator::$tablesAlreadyInstalled = null;
+    }
+
+    public function tearDown()
+    {
+        Access::setSingletonInstance(null);
+        ArchiveTableCreator::$tablesAlreadyInstalled = null;
     }
 
     /**
@@ -120,7 +128,6 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
         $this->assertTrue($archiveProcessor->public_isArchiveTemporary());
     }
 
-
     private function compareTimestamps($expected, $processed)
     {
 //        $messageIfFails = Date::factory($expected)->getDatetime() . " != " . Date::factory($processed)->getDatetime();
@@ -136,7 +143,7 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
     {
         $archiveProcessor = $this->_createArchiveProcessor('day', '2010-01-01', 'UTC');
 
-        // min finished timestamp considered when looking at archive timestamp 
+        // min finished timestamp considered when looking at archive timestamp
         $dateMinArchived = Date::factory('2010-01-02')->getTimestamp();
         $this->assertEquals($dateMinArchived, $archiveProcessor->public_getMinTimeArchiveProcessed() + 1);
 
@@ -153,7 +160,7 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
     {
         $timezone = 'UTC+5.5';
         $archiveProcessor = $this->_createArchiveProcessor('day', '2010-01-01', $timezone);
-        // min finished timestamp considered when looking at archive timestamp 
+        // min finished timestamp considered when looking at archive timestamp
         $dateMinArchived = Date::factory('2010-01-01 18:30:00');
         $this->assertEquals($dateMinArchived->getTimestamp(), $archiveProcessor->public_getMinTimeArchiveProcessed() + 1);
 
@@ -170,7 +177,7 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
     {
         $timezone = 'UTC-5.5';
         $archiveProcessor = $this->_createArchiveProcessor('month', '2010-01-02', $timezone);
-        // min finished timestamp considered when looking at archive timestamp 
+        // min finished timestamp considered when looking at archive timestamp
         $dateMinArchived = Date::factory('2010-02-01 05:30:00');
         $this->assertEquals($dateMinArchived->getTimestamp(), $archiveProcessor->public_getMinTimeArchiveProcessed() + 1);
 
@@ -335,7 +342,7 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
                     . ' The error Messages from MySQL were: '
                     . $didWeUseBulk
                     . "\n\n Learn more how to enable LOAD LOCAL DATA INFILE see the Mysql doc (http://dev.mysql.com/doc/refman/5.0/en/load-data-local.html) "
-                    . "\n   or ask in this Piwik ticket (http://dev.piwik.org/trac/ticket/3605)"
+                    . "\n   or ask in this Piwik ticket (https://github.com/piwik/piwik/issues/3605)"
             );
         }
         return $didWeUseBulk;
@@ -370,7 +377,6 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
      */
     public function testTableInsertBatchBlob()
     {
-        $siteTimezone = 'America/Toronto';
         $dateLabel = '2011-03-31';
         $table = ArchiveTableCreator::getBlobTable(Date::factory($dateLabel));
 
@@ -402,7 +408,6 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
      */
     public function testTableInsertBatchIterateBlob()
     {
-        $siteTimezone = 'America/Toronto';
         $dateLabel = '2011-03-31';
         $table = ArchiveTableCreator::getBlobTable(Date::factory($dateLabel));
 
@@ -421,7 +426,6 @@ class Core_ArchiveProcessingTest extends DatabaseTestCase
         }
         $this->fail('Exception expected');
     }
-
 
     protected function _checkTableIsExpected($table, $data)
     {

@@ -1,10 +1,12 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+namespace Piwik\Tests;
+
 use Piwik\Access;
 use Piwik\Common;
 use Piwik\Config;
@@ -29,6 +31,14 @@ use Piwik\Site;
 use Piwik\Tracker\Cache;
 use Piwik\Translate;
 use Piwik\Url;
+use PHPUnit_Framework_Assert;
+use Piwik_TestingEnvironment;
+use FakeAccess;
+use PiwikTracker;
+use Piwik_LocalTracker;
+use Piwik\Updater;
+use Piwik\Plugins\CoreUpdater\CoreUpdater;
+use Exception;
 
 /**
  * Base type for all integration test fixtures. Integration test fixtures
@@ -67,7 +77,24 @@ class Fixture extends PHPUnit_Framework_Assert
     public $resetPersistedFixture = false;
     public $printToScreen = false;
 
+    public $testCaseClass = false;
+    public $extraPluginsToLoad = array();
+
     public $testEnvironment = null;
+
+    /**
+     * @return string
+     */
+    protected static function getPythonBinary()
+    {
+        if(\Piwik\SettingsServer::isWindows()) {
+            return "C:\Python27\python.exe";
+        }
+        if(IntegrationTestCase::isTravisCI()) {
+            return 'python2.6';
+        }
+        return 'python';
+    }
 
     /** Adds data to Piwik. Creates sites, tracks visits, imports log files, etc. */
     public function setUp()
@@ -133,9 +160,12 @@ class Fixture extends PHPUnit_Framework_Assert
             Config::getInstance()->database['dbname'] = $this->dbName;
             Db::createDatabaseObject();
 
+            Db::get()->query("SET wait_timeout=28800;");
+
             DbHelper::createTables();
 
             \Piwik\Plugin\Manager::getInstance()->unloadPlugins();
+
         } catch (Exception $e) {
             static::fail("TEST INITIALIZATION FAILED: " . $e->getMessage() . "\n" . $e->getTraceAsString());
         }
@@ -159,7 +189,11 @@ class Fixture extends PHPUnit_Framework_Assert
 
         Cache::deleteTrackerCache();
 
-        static::loadAllPlugins();
+        static::loadAllPlugins($this->getTestEnvironment(), $this->testCaseClass, $this->extraPluginsToLoad);
+
+        self::updateDatabase();
+
+        self::installAndActivatePlugins();
 
         $_GET = $_REQUEST = array();
         $_SERVER['HTTP_REFERER'] = '';
@@ -209,6 +243,10 @@ class Fixture extends PHPUnit_Framework_Assert
         if ($this->testEnvironment === null) {
             $this->testEnvironment = new Piwik_TestingEnvironment();
             $this->testEnvironment->delete();
+
+            if (getenv('PIWIK_USE_XHPROF') == 1) {
+                $this->testEnvironment->useXhprof = true;
+            }
         }
         return $this->testEnvironment;
     }
@@ -249,14 +287,53 @@ class Fixture extends PHPUnit_Framework_Assert
 
         $_GET = $_REQUEST = array();
         Translate::unloadEnglishTranslation();
+
+        Config::unsetInstance();
+
+        \Piwik\Config::getInstance()->Plugins; // make sure Plugins exists in a config object for next tests that use Plugin\Manager
+                                               // since Plugin\Manager uses getFromGlobalConfig which doesn't init the config object
     }
 
-    public static function loadAllPlugins()
+    public static function loadAllPlugins($testEnvironment = null, $testCaseClass = false, $extraPluginsToLoad = array())
     {
+        if (empty($testEnvironment)) {
+            $testEnvironment = new Piwik_TestingEnvironment();
+        }
+
         DbHelper::createTables();
         $pluginsManager = \Piwik\Plugin\Manager::getInstance();
-        $plugins = $pluginsManager->getPluginsToLoadDuringTests();
+
+        $plugins = $testEnvironment->getCoreAndSupportedPlugins();
+
+        // make sure the plugin that executed this method is included in the plugins to load
+        $extraPlugins = array_merge($extraPluginsToLoad, array(
+            \Piwik\Plugin::getPluginNameFromBacktrace(debug_backtrace()),
+            \Piwik\Plugin::getPluginNameFromNamespace($testCaseClass),
+            \Piwik\Plugin::getPluginNameFromNamespace(get_called_class())
+        ));
+        foreach ($extraPlugins as $pluginName) {
+            if (empty($pluginName)) {
+                continue;
+            }
+
+            if (in_array($pluginName, $plugins)) {
+                continue;
+            }
+
+            $plugins[] = $pluginName;
+            if ($testEnvironment) {
+                $testEnvironment->pluginsToLoad = array_merge($testEnvironment->pluginsToLoad ?: array(), array($pluginName));
+            }
+        }
+
+        Log::debug("Plugins to load during tests: " . implode(', ', $plugins));
+
         $pluginsManager->loadPlugins($plugins);
+    }
+
+    public static function installAndActivatePlugins()
+    {
+        $pluginsManager = \Piwik\Plugin\Manager::getInstance();
 
         // Install plugins
         $messages = $pluginsManager->installLoadedPlugins();
@@ -265,7 +342,8 @@ class Fixture extends PHPUnit_Framework_Assert
         }
 
         // Activate them
-        foreach($plugins as $name) {
+        foreach($pluginsManager->getLoadedPlugins() as $plugin) {
+            $name = $plugin->getPluginName();
             if (!$pluginsManager->isPluginActivated($name)) {
                 $pluginsManager->activatePlugin($name);
             }
@@ -275,8 +353,9 @@ class Fixture extends PHPUnit_Framework_Assert
     public static function unloadAllPlugins()
     {
         try {
-            $plugins = \Piwik\Plugin\Manager::getInstance()->getLoadedPlugins();
-            foreach ($plugins AS $plugin) {
+            $manager = \Piwik\Plugin\Manager::getInstance();
+            $plugins = $manager->getLoadedPlugins();
+            foreach ($plugins as $plugin) {
                 $plugin->uninstall();
             }
             \Piwik\Plugin\Manager::getInstance()->unloadPlugins();
@@ -623,10 +702,8 @@ class Fixture extends PHPUnit_Framework_Assert
 
         $dump = fopen($url, 'rb');
         $outfile = fopen($outfileName, 'wb');
-        $bytesRead = 0;
         while (!feof($dump)) {
             fwrite($outfile, fread($dump, $bufferSize), $bufferSize);
-            $bytesRead += $bufferSize;
         }
         fclose($dump);
         fclose($outfile);
@@ -643,7 +720,7 @@ class Fixture extends PHPUnit_Framework_Assert
 
     protected static function executeLogImporter($logFile, $options)
     {
-        $python = \Piwik\SettingsServer::isWindows() ? "C:\Python27\python.exe" : 'python';
+        $python = self::getPythonBinary();
 
         // create the command
         $cmd = $python
@@ -681,7 +758,6 @@ class Fixture extends PHPUnit_Framework_Assert
         return Db::fetchOne("SELECT COUNT(*) FROM " . Common::prefixTable('goal') . " WHERE idgoal = ? AND idsite = ?", array($idGoal, $idSite)) != 0;
     }
 
-
     /**
      * Connects to MySQL w/o specifying a database.
      */
@@ -708,7 +784,7 @@ class Fixture extends PHPUnit_Framework_Assert
 
     public function dropDatabase($dbName = null)
     {
-        $dbName = $dbName ?: $this->dbName;
+        $dbName = $dbName ?: $this->dbName ?: Config::getInstance()->database_tests['dbname'];
 
         $this->log("Dropping database '$dbName'...");
 
@@ -740,15 +816,38 @@ class Fixture extends PHPUnit_Framework_Assert
         }
         return $result;
     }
-}
 
-// TODO: remove when other plugins don't use BaseFixture
-class Test_Piwik_BaseFixture extends Fixture
-{
+    public static function updateDatabase($force = false)
+    {
+        Cache::deleteTrackerCache();
+        Option::clearCache();
+
+        if ($force) {
+            // remove version options to force update
+            Option::deleteLike('version%');
+            Option::set('version_core', '0.0');
+        }
+
+        $updater = new Updater();
+        $componentsWithUpdateFile = CoreUpdater::getComponentUpdates($updater);
+        if (empty($componentsWithUpdateFile)) {
+            return false;
+        }
+
+        $result = CoreUpdater::updateComponents($updater, $componentsWithUpdateFile);
+        if (!empty($result['coreError'])
+            || !empty($result['warnings'])
+            || !empty($result['errors'])
+        ) {
+            throw new \Exception("Failed to update database (errors or warnings found): " . print_r($result, true));
+        }
+
+        return $result;
+    }
 }
 
 // needed by tests that use stored segments w/ the proxy index.php
-class Test_Access_OverrideLogin extends Access
+class OverrideLogin extends Access
 {
     public function getLogin()
     {

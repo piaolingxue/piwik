@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -17,8 +17,8 @@ use Piwik\Date;
 use Piwik\Metrics;
 use Piwik\Piwik;
 use Piwik\Plugins\CustomVariables\API as APICustomVariables;
+use Piwik\Plugins\Actions\Actions\ActionSiteSearch;
 use Piwik\Tracker\Action;
-use Piwik\Tracker\ActionSiteSearch;
 use Piwik\Tracker\PageUrl;
 
 /**
@@ -81,8 +81,10 @@ class API extends \Piwik\Plugin\API
         }
 
         if ($avgGenerationTimeRequested) {
-            $tempColumns[] = Archiver::METRIC_SUM_TIME_RECORD_NAME;
-            $tempColumns[] = Archiver::METRIC_HITS_TIMED_RECORD_NAME;
+            $tempColumns = array(
+                Archiver::METRIC_SUM_TIME_RECORD_NAME,
+                Archiver::METRIC_HITS_TIMED_RECORD_NAME,
+            );
             $columns = array_merge($columns, $tempColumns);
             $columns = array_unique($columns);
 
@@ -342,7 +344,6 @@ class API extends \Piwik\Plugin\API
             $dataTable = $customVariables->getEmptyClone();
 
             $customVariableDatatables = $customVariables->getDataTables();
-            $dataTables = $dataTable->getDataTables();
             foreach ($customVariableDatatables as $key => $customVariableTableForDate) {
                 // we do not enter the IF, in the case idSite=1,3 AND period=day&date=datefrom,dateto,
                 if ($customVariableTableForDate instanceof DataTable
@@ -458,6 +459,15 @@ class API extends \Piwik\Plugin\API
             // match found on this level and more levels remaining: go deeper
             $idSubTable = $row->getIdSubDataTable();
             $callBackParameters[6] = $idSubTable;
+
+            /**
+             * @var \Piwik\Period $period
+             */
+            $period = $table->getMetadata('period');
+            if (!empty($period)) {
+                $callBackParameters[3] = $period->getDateStart() . ',' . $period->getDateEnd();
+            }
+
             $table = call_user_func_array(array($this, 'getDataTableFromArchive'), $callBackParameters);
             return $this->doFilterPageDatatableSearch($callBackParameters, $table, $searchTree);
         }

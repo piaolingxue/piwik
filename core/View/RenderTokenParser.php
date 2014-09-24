@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -41,7 +41,7 @@ class RenderTokenParser extends Twig_TokenParser
         $variablesOverride = new Twig_Node_Expression_Array(array(), $token->getLine());
         if ($stream->test(Twig_Token::NAME_TYPE, 'with')) {
             $stream->next();
-            
+
             $variablesOverride->addElement($this->parser->getExpressionParser()->parseExpression());
         }
 

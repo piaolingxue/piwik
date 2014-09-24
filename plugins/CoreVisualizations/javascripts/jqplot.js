@@ -1,5 +1,5 @@
 /**
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * DataTable UI class for JqplotGraph.
  *
@@ -12,11 +12,21 @@
 
     var exports = require('piwik/UI'),
         DataTable = exports.DataTable,
-        dataTablePrototype = DataTable.prototype;
+        dataTablePrototype = DataTable.prototype,
+        getLabelFontFamily = function () {
+            if (!window.piwik.jqplotLabelFont) {
+                window.piwik.jqplotLabelFont = $('<p/>').hide().appendTo('body').css('font-family');
+            }
+
+            return window.piwik.jqplotLabelFont || 'Arial';
+        }
+        ;
+
+    exports.getLabelFontFamily = getLabelFontFamily;
 
     /**
      * DataTable UI class for jqPlot graph datatable visualizations.
-     * 
+     *
      * @constructor
      */
     exports.JqplotGraphDataTable = function (element) {
@@ -95,7 +105,7 @@
                     tickOptions: {
                         showMark: false,
                         fontSize: '11px',
-                        fontFamily: window.piwik.jqplotLabelFont || 'Arial'
+                        fontFamily: getLabelFontFamily()
                     },
                     rendererOptions: {
                         drawBaseline: false
@@ -136,7 +146,7 @@
                     if ($.isArray(value) && value[1]) {
                         value = value[1];
                     }
-                    
+
                     percentages[valueIdx] = sum > 0 ? Math.round(100 * value / sum) : 0;
                 }
             }
@@ -355,10 +365,10 @@
             });
 
             var popover = $(document.createElement('div'));
-            
+
             popover.append('<div style="font-size: 13px; margin-bottom: 10px;">'
                 + lang.exportText + '</div>').append($(img));
-                
+
             popover.dialog({
                 title: lang.exportTitle,
                 modal: true,
@@ -486,7 +496,7 @@
             } else if (viewDataTable == 'graphVerticalBar') {
                 graphType = 'bar';
             }
-            
+
             var namespace = graphType + '-graph-colors';
 
             this.jqplotParams.seriesColors = colorManager.getColors(namespace, seriesColorNames, true);
@@ -608,7 +618,6 @@ JQPlotExternalSeriesToggle.prototype = {
 
 };
 
-
 // ROW EVOLUTION SERIES TOGGLE
 
 function RowEvolutionSeriesToggle(targetDivId, jqplotData, initiallyShowAll) {
@@ -623,7 +632,7 @@ RowEvolutionSeriesToggle.prototype.attachEvents = function () {
 
     this.seriesPickers.each(function (i) {
         var el = $(this);
-        el.click(function (e) {
+        el.off('click').on('click', function (e) {
             if (e.shiftKey) {
                 self.toggleSeries(i);
 
@@ -664,7 +673,6 @@ RowEvolutionSeriesToggle.prototype.beforeReplot = function () {
         }
     }
 };
-
 
 // ------------------------------------------------------------
 //  PIWIK TICKS PLUGIN FOR JQPLOT
@@ -825,7 +833,6 @@ RowEvolutionSeriesToggle.prototype.beforeReplot = function () {
 
 })(jQuery);
 
-
 // ------------------------------------------------------------
 //  LEGEND PLUGIN FOR JQPLOT
 //  Render legend on canvas
@@ -880,7 +887,7 @@ RowEvolutionSeriesToggle.prototype.beforeReplot = function () {
 
         var ctx = legend.legendCanvas._ctx;
         ctx.save();
-        ctx.font = '11px ' + (window.piwik.jqplotLabelFont || 'Arial');
+        ctx.font = '11px ' + require('piwik/UI').getLabelFontFamily()
 
         // render series names
         var x = 0;
@@ -923,7 +930,6 @@ RowEvolutionSeriesToggle.prototype.beforeReplot = function () {
     $.jqplot.postDrawHooks.push($.jqplot.CanvasLegendRenderer.postDraw);
 
 })(jQuery);
-
 
 // ------------------------------------------------------------
 //  SERIES PICKER
@@ -1019,7 +1025,7 @@ RowEvolutionSeriesToggle.prototype.beforeReplot = function () {
         var ctx = legend.pieLegendCanvas._ctx;
         ctx.save();
 
-        ctx.font = '11px ' + (window.piwik.jqplotLabelFont || 'Arial');
+        ctx.font = '11px ' + require('piwik/UI').getLabelFontFamily()
 
         // render labels
         var height = legend.pieLegendCanvas._elem.height();

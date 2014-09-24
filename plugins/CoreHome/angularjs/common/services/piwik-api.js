@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -11,7 +11,7 @@ angular.module('piwikApp.service').factory('piwikApi', function ($http, $q, $roo
     var format = 'json';
     var getParams  = {};
     var postParams = {};
-    var requestHandle = null;
+    var allRequests = [];
 
     var piwikApi = {};
 
@@ -37,42 +37,48 @@ angular.module('piwikApp.service').factory('piwikApi', function ($http, $q, $roo
         postParams = {};
     }
 
+    function isErrorResponse(response) {
+        return response && response.result == 'error';
+    }
+
+    function createResponseErrorNotification(response, options) {
+        if (response.message) {
+            var UI = require('piwik/UI');
+            var notification = new UI.Notification();
+            notification.show(response.message, {
+                context: 'error',
+                type: 'toast',
+                id: 'ajaxHelper',
+                placeat: options.placeat
+            });
+            notification.scrollToNotification();
+        }
+    }
+
     /**
      * Send the request
      * @return $promise
      */
-    function send () {
+    function send (options) {
+        if (!options) {
+            options = {};
+        }
 
-        var deferred = $q.defer();
-        var requestHandle = deferred;
+        var deferred = $q.defer(),
+            requestPromise = deferred.promise;
 
         var onError = function (message) {
             deferred.reject(message);
-            requestHandle = null;
         };
 
         var onSuccess = function (response) {
-            if (response && response.result == 'error') {
+            if (isErrorResponse(response)) {
+                onError(response.message || null);
 
-                if (response.message) {
-                    onError(response.message);
-
-                    var UI = require('piwik/UI');
-                    var notification = new UI.Notification();
-                    notification.show(response.message, {
-                        context: 'error',
-                        type: 'toast',
-                        id: 'ajaxHelper'
-                    });
-                    notification.scrollToNotification();
-                } else {
-                    onError(null);
-                }
-
+                createResponseErrorNotification(response, options);
             } else {
                 deferred.resolve(response);
             }
-            requestHandle = null;
         };
 
         var headers = {
@@ -87,13 +93,40 @@ angular.module('piwikApp.service').factory('piwikApi', function ($http, $q, $roo
             responseType: format,
             params: _mixinDefaultGetParams(getParams),
             data: $.param(getPostParams(postParams)),
-            timeout: deferred.promise,
+            timeout: requestPromise,
             headers: headers
         };
 
         $http(ajaxCall).success(onSuccess).error(onError);
 
-        return deferred.promise;
+        // we can't modify requestPromise directly and add an abort method since for some reason it gets
+        // removed after then/finally/catch is called.
+        var addAbortMethod = function (to) {
+            return {
+                then: function () {
+                    return addAbortMethod(to.then.apply(to, arguments));
+                },
+
+                'finally': function () {
+                    return addAbortMethod(to['finally'].apply(to, arguments));
+                },
+
+                'catch': function () {
+                    return addAbortMethod(to['catch'].apply(to, arguments));
+                },
+
+                abort: function () {
+                    deferred.reject();
+                    return this;
+                }
+            };
+        };
+
+        var request = addAbortMethod(requestPromise);
+
+        allRequests.push(request);
+
+        return request;
     }
 
     /**
@@ -103,10 +136,9 @@ angular.module('piwikApp.service').factory('piwikApi', function ($http, $q, $roo
      * @return {object}
      * @private
      */
-     function getPostParams () {
-        return {
-            token_auth: piwik.token_auth
-        };
+     function getPostParams (params) {
+        params.token_auth = piwik.token_auth;
+        return params;
     }
 
     /**
@@ -147,39 +179,89 @@ angular.module('piwikApp.service').factory('piwikApi', function ($http, $q, $roo
         return getParamsToMixin;
     }
 
-    piwikApi.abort = function () {
+    piwikApi.abortAll = function () {
         reset();
 
-        if (requestHandle) {
-            requestHandle.resolve();
-            requestHandle = null;
-        }
+        allRequests.forEach(function (request) {
+            request.abort();
+        });
+
+        allRequests = [];
+    };
+
+    /**
+     * @deprecated
+     */
+    piwikApi.abort = function () {
+        this.abortAll();
     };
 
     /**
      * Perform a reading API request.
      * @param getParams
      */
-    piwikApi.fetch = function (getParams) {
+    piwikApi.fetch = function (getParams, options) {
 
-        getParams.module = 'API';
-        getParams.format = 'JSON';
+        getParams.module = getParams.module || 'API';
+        getParams.format = 'JSON2';
 
         addParams(getParams, 'GET');
 
-        var promise = send();
+        var promise = send(options);
 
         reset();
 
         return promise;
     };
 
-    piwikApi.post = function (getParams, _postParams_) {
+    piwikApi.post = function (getParams, _postParams_, options) {
         if (_postParams_) {
             postParams = _postParams_;
         }
 
-        return this.fetch(getParams);
+        return this.fetch(getParams, options);
+    };
+
+    /**
+     * Convenience method that will perform a bulk request using Piwik's API.getBulkRequest method.
+     * Bulk requests allow you to execute multiple Piwik requests with one HTTP request.
+     *
+     * @param {object[]} requests
+     * @param {object} options
+     * @return {HttpPromise} a promise that is resolved when the request finishes. The argument passed
+     *                       to the .then(...) callback will be an array with one element per request
+     *                       made.
+     */
+    piwikApi.bulkFetch = function (requests, options) {
+        var bulkApiRequestParams = {
+            urls: requests.map(function (requestObj) { return '?' + $.param(requestObj); })
+        };
+
+        var deferred = $q.defer(),
+            requestPromise = this.post({method: "API.getBulkRequest"}, bulkApiRequestParams, options).then(function (response) {
+                if (!(response instanceof Array)) {
+                    response = [response];
+                }
+
+                // check for errors
+                for (var i = 0; i != response.length; ++i) {
+                    var specificResponse = response[i];
+
+                    if (isErrorResponse(specificResponse)) {
+                        deferred.reject(specificResponse.message || null);
+
+                        createResponseErrorNotification(specificResponse, options || {});
+
+                        return;
+                    }
+                }
+
+                deferred.resolve(response);
+            }).catch(function () {
+                deferred.reject.apply(deferred, arguments);
+            });
+
+        return deferred.promise;
     };
 
     return piwikApi;

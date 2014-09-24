@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -14,7 +14,6 @@ use Piwik\Date;
 use Piwik\Db;
 use Piwik\Piwik;
 use Piwik\Config;
-use Piwik\Plugins\UsersManager\UsersManager;
 use Piwik\Segment;
 
 /**
@@ -79,7 +78,11 @@ class API extends \Piwik\Plugin\API
     {
         $autoArchive = (int)$autoArchive;
         if ($autoArchive) {
-            $exception = new Exception("To prevent abuse, autoArchive=1 requires Super User or ControllerAdmin access.");
+            $exception = new Exception(
+                "Please contact Support to make these changes on your behalf. ".
+                " To update (or create) a pre-processed segment, a user must have admin access or super user access. "
+            );
+
             if (empty($idSite)) {
                 if (!Piwik::hasUserSuperUserAccess()) {
                     throw $exception;
@@ -112,7 +115,13 @@ class API extends \Piwik\Plugin\API
 
     protected function checkUserCanAddNewSegment($idSite)
     {
-        if(!$this->isUserCanAddNewSegment($idSite)) {
+        if (empty($idSite)
+            && !SegmentEditor::isAddingSegmentsForAllWebsitesEnabled()
+        ) {
+            throw new Exception(Piwik::translate('SegmentEditor_AddingSegmentForAllWebsitesDisabled'));
+        }
+
+        if (!$this->isUserCanAddNewSegment($idSite)) {
             throw new Exception(Piwik::translate('SegmentEditor_YouDontHaveAccessToCreateSegments'));
         }
     }
@@ -214,7 +223,6 @@ class API extends \Piwik\Plugin\API
          * @param int $idSegment The ID of the segment which visibility is reduced.
          */
         Piwik::postEvent('SegmentEditor.update', array($idSegment, $bind));
-
 
         $db = Db::get();
         $db->update(Common::prefixTable("segment"),

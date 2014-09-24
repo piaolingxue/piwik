@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -30,8 +30,10 @@ class StylesheetUIAssetMerger extends UIAssetMerger
 
     protected function getMergedAssets()
     {
-        $this->lessCompiler->addImportDir(PIWIK_USER_PATH);
-        return $this->lessCompiler->compile($this->getConcatenatedAssets());
+        // note: we're using setImportDir on purpose (not addImportDir)
+        $this->lessCompiler->setImportDir(PIWIK_USER_PATH);
+        $concatenatedAssets = $this->getConcatenatedAssets();
+        return $this->lessCompiler->compile($concatenatedAssets);
     }
 
     /**
@@ -79,7 +81,7 @@ class StylesheetUIAssetMerger extends UIAssetMerger
 
     protected function processFileContent($uiAsset)
     {
-        $pathsRewriter = $this->getCssPathsRewriter($uiAsset); 
+        $pathsRewriter = $this->getCssPathsRewriter($uiAsset);
         $content = $uiAsset->getContent();
         $content = $this->rewriteCssImagePaths($content, $pathsRewriter);
         $content = $this->rewriteCssImportPaths($content, $pathsRewriter);
@@ -117,34 +119,31 @@ class StylesheetUIAssetMerger extends UIAssetMerger
      * - rewrites paths defined relatively to their css/less definition file
      * - rewrite windows directory separator \\ to /
      *
-     * @param rootDirectoryLength $rootDirectoryLength
-     * @param baseDirectory $baseDirectory
-     * @return function
+     * @param string $baseDirectory
+     * @return \Closure
      */
     private function getCssPathsRewriter($uiAsset)
     {
-        static $rootDirectoryLength = null;
-        if (is_null($rootDirectoryLength)) {
-            $rootDirectoryLength = self::countDirectoriesInPathToRoot($uiAsset);
-        }
         $baseDirectory = dirname($uiAsset->getRelativeLocation());
 
-        return function ($matches) use ($rootDirectoryLength, $baseDirectory) {
-            $publicPath = $matches[1] . $matches[2];
+        return function ($matches) use ($baseDirectory) {
             $absolutePath = PIWIK_USER_PATH . "/$baseDirectory/" . $matches[2];
-            
+
             // Allow to import extension less file
             if (strpos($matches[2], '.') === false) {
                 $absolutePath .= '.less';
             }
-                
+
             // Prevent from rewriting full path
             $absolutePath = realpath($absolutePath);
             if ($absolutePath) {
-                $relativePath = substr($absolutePath, $rootDirectoryLength);
+                $relativePath = $baseDirectory . "/" . $matches[2];
                 $relativePath = str_replace('\\', '/', $relativePath);
-                $publicPath = $matches[1] . $relativePath;
+                $publicPath   = $matches[1] . $relativePath;
+            } else {
+                $publicPath   = $matches[1] . $matches[2];
             }
+
             return $publicPath;
         };
     }

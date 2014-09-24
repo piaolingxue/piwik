@@ -8,10 +8,4 @@ require realpath(dirname(__FILE__)) . "/includes.php";
 
 Piwik_TestingEnvironment::addHooks();
 
-if (empty($_GET['ignoreClearAllViewDataTableParameters'])) {
-    \Piwik\ViewDataTable\Manager::clearAllViewDataTableParameters();
-}
-
-\Piwik\Profiler::setupProfilerXHProf();
-
 include PIWIK_INCLUDE_PATH . '/index.php';

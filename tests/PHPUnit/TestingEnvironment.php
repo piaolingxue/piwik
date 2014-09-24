@@ -3,6 +3,8 @@
 use Piwik\Common;
 use Piwik\Config;
 use Piwik\Piwik;
+use Piwik\Option;
+use Piwik\Plugin\Manager as PluginManager;
 
 require_once PIWIK_INCLUDE_PATH . "/core/Config.php";
 
@@ -61,8 +63,15 @@ class Piwik_TestingEnvironment
         $this->behaviorOverrideProperties[$key] = $value;
     }
 
+    public function __isset($name)
+    {
+        return isset($this->behaviorOverrideProperties[$name]);
+    }
+
     public function save()
     {
+        @mkdir(PIWIK_INCLUDE_PATH . '/tmp');
+
         $overridePath = PIWIK_INCLUDE_PATH . '/tmp/testingPathOverride.json';
         file_put_contents($overridePath, json_encode($this->behaviorOverrideProperties));
     }
@@ -76,12 +85,39 @@ class Piwik_TestingEnvironment
     public function logVariables()
     {
         try {
-            if (isset($_SERVER['QUERY_STRING'])) {
+            if (isset($_SERVER['QUERY_STRING'])
+                && !$this->dontUseTestConfig
+            ) {
                 \Piwik\Log::verbose("Test Environment Variables for (%s):\n%s", $_SERVER['QUERY_STRING'], print_r($this->behaviorOverrideProperties, true));
             }
         } catch (Exception $ex) {
             // ignore
         }
+    }
+
+    public function getCoreAndSupportedPlugins()
+    {
+        $disabledPlugins = PluginManager::getInstance()->getCorePluginsDisabledByDefault();
+        $disabledPlugins[] = 'LoginHttpAuth';
+        $disabledPlugins[] = 'ExampleVisualization';
+        $disabledPlugins[] = 'PleineLune';
+
+        $disabledPlugins = array_diff($disabledPlugins, array(
+            'DBStats', 'ExampleUI', 'ExampleCommand', 'ExampleSettingsPlugin'
+        ));
+
+        $plugins = array_filter(PluginManager::getInstance()->readPluginsDirectory(), function ($pluginName) use ($disabledPlugins) {
+            if (in_array($pluginName, $disabledPlugins)) {
+                return false;
+            }
+
+            return PluginManager::getInstance()->isPluginBundledWithCore($pluginName)
+                || PluginManager::getInstance()->isPluginOfficialAndNotBundledWithCore($pluginName);
+        });
+
+        sort($plugins);
+
+        return $plugins;
     }
 
     public static function addHooks()
@@ -100,6 +136,10 @@ class Piwik_TestingEnvironment
             }
         }
 
+        if ($testingEnvironment->useXhprof) {
+            \Piwik\Profiler::setupProfilerXHProf($mainRun = false, $setupDuringTracking = true);
+        }
+
         Config::setSingletonInstance(new Config(
             $testingEnvironment->configFileGlobal, $testingEnvironment->configFileLocal, $testingEnvironment->configFileCommon
         ));
@@ -113,27 +153,24 @@ class Piwik_TestingEnvironment
             }
         });
         if (!$testingEnvironment->dontUseTestConfig) {
-            Piwik::addAction('Config.createConfigSingleton', function(Config $config, &$cache, $local) use ($testingEnvironment) {
+            Piwik::addAction('Config.createConfigSingleton', function(Config $config, &$cache, &$local) use ($testingEnvironment) {
                 $config->setTestEnvironment($testingEnvironment->configFileLocal, $testingEnvironment->configFileGlobal, $testingEnvironment->configFileCommon);
 
                 if ($testingEnvironment->configFileLocal) {
-                    unset($cache['General']);
-                    $config->General['session_save_handler'] = 'dbtable';
+                    $local['General']['session_save_handler'] = 'dbtable';
                 }
 
                 $manager = \Piwik\Plugin\Manager::getInstance();
-                $pluginsToLoad = $manager->getPluginsToLoadDuringTests();
-                $config->Plugins = array('Plugins' => $pluginsToLoad);
+                $pluginsToLoad = $testingEnvironment->getCoreAndSupportedPlugins();
+                if (!empty($testingEnvironment->pluginsToLoad)) {
+                    $pluginsToLoad = array_unique(array_merge($pluginsToLoad, $testingEnvironment->pluginsToLoad));
+                }
 
-                $trackerPluginsToLoad = array_filter($pluginsToLoad, function ($plugin) use ($manager) {
-                    return $manager->isTrackerPlugin($manager->loadPlugin($plugin));
-                });
+                sort($pluginsToLoad);
 
-                $config->Plugins_Tracker = array('Plugins_Tracker' => $trackerPluginsToLoad);
+                $local['Plugins'] = array('Plugins' => $pluginsToLoad);
 
-                $log = $config->log;
-                $log['log_writers'] = array('file');
-                $config->log = $log;
+                $local['log']['log_writers'] = array('file');
 
                 $manager->unloadPlugins();
 
@@ -151,7 +188,17 @@ class Piwik_TestingEnvironment
                 }
             });
         }
-        Piwik::addAction('Request.dispatch', function() {
+        Piwik::addAction('Request.dispatch', function() use ($testingEnvironment) {
+            if (empty($_GET['ignoreClearAllViewDataTableParameters'])) { // TODO: should use testingEnvironment variable, not query param
+                \Piwik\ViewDataTable\Manager::clearAllViewDataTableParameters();
+            }
+
+            if ($testingEnvironment->optionsOverride) {
+                foreach ($testingEnvironment->optionsOverride as $name => $value) {
+                    Option::set($name, $value);
+                }
+            }
+
             \Piwik\Plugins\CoreVisualizations\Visualizations\Cloud::$debugDisableShuffle = true;
             \Piwik\Visualization\Sparkline::$enableSparklineImages = false;
             \Piwik\Plugins\ExampleUI\API::$disableRandomness = true;
@@ -190,7 +237,7 @@ class Piwik_TestingEnvironment
                 'subject' => $mail->getSubject(),
                 'contents' => $outputContent
             );
-            
+
             file_put_contents($outputFile, Common::json_encode($outputContents));
         });
     }

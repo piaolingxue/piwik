@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -279,9 +279,9 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
                                        $form->getSubmitValue('email'));
 
                 $email = $form->getSubmitValue('email');
-                $newsletterSecurity = $form->getSubmitValue('subscribe_newsletter_security');
-                $newsletterCommunity = $form->getSubmitValue('subscribe_newsletter_community');
-                $this->registerNewsletter($email, $newsletterSecurity, $newsletterCommunity);
+                $newsletterPiwikORG = $form->getSubmitValue('subscribe_newsletter_piwikorg');
+                $newsletterPiwikPRO = $form->getSubmitValue('subscribe_newsletter_piwikpro');
+                $this->registerNewsletter($email, $newsletterPiwikORG, $newsletterPiwikPRO);
                 $this->redirectToNextStep(__FUNCTION__);
 
             } catch (Exception $e) {
@@ -454,7 +454,7 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
      */
     public function getBaseCss()
     {
-        @header('Content-Type: text/css');
+        Common::sendHeader('Content-Type: text/css');
         return AssetManager::getInstance()->getCompiledBaseCss()->getContent();
     }
 
@@ -549,7 +549,6 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
         Piwik::redirectToModule('Installation', $nextStep, $parameters);
     }
 
-
     /**
      * Extract host from URL
      *
@@ -606,6 +605,7 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
 
         $view->helpMessages = array(
             'zlib'            => 'Installation_SystemCheckZlibHelp',
+            'gzopen'          => 'Installation_SystemCheckZlibHelp',
             'SPL'             => 'Installation_SystemCheckSplHelp',
             'iconv'           => 'Installation_SystemCheckIconvHelp',
             'mbstring'        => 'Installation_SystemCheckMbstringHelp',
@@ -625,11 +625,11 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
             'gzuncompress'    => 'Installation_SystemCheckGzuncompressHelp',
             'pack'            => 'Installation_SystemCheckPackHelp',
             'php5-json'       => 'Installation_SystemCheckJsonHelp',
+            'session.auto_start' => 'Installation_SystemCheckSessionAutostart',
         );
 
         $view->problemWithSomeDirectories = (false !== array_search(false, $view->infos['directories']));
     }
-
 
     private function createSuperUser($login, $password, $email)
     {
@@ -665,27 +665,27 @@ class Controller extends \Piwik\Plugin\ControllerAdmin
 
     /**
      * @param $email
-     * @param $newsletterSecurity
-     * @param $newsletterCommunity
+     * @param $newsletterPiwikORG
+     * @param $newsletterPiwikPRO
      */
-    protected function registerNewsletter($email, $newsletterSecurity, $newsletterCommunity)
+    protected function registerNewsletter($email, $newsletterPiwikORG, $newsletterPiwikPRO)
     {
         $url = Config::getInstance()->General['api_service_url'];
         $url .= '/1.0/subscribeNewsletter/';
         $params = array(
             'email'     => $email,
-            'security'  => $newsletterSecurity,
-            'community' => $newsletterCommunity,
+            'piwikorg'  => $newsletterPiwikORG,
+            'piwikpro'  => $newsletterPiwikPRO,
             'url'       => Url::getCurrentUrlWithoutQueryString(),
         );
-        if ($params['security'] == '1'
-            || $params['community'] == '1'
+        if ($params['piwikorg'] == '1'
+            || $params['piwikpro'] == '1'
         ) {
-            if (!isset($params['security'])) {
-                $params['security'] = '0';
+            if (!isset($params['piwikorg'])) {
+                $params['piwikorg'] = '0';
             }
-            if (!isset($params['community'])) {
-                $params['community'] = '0';
+            if (!isset($params['piwikpro'])) {
+                $params['piwikpro'] = '0';
             }
             $url .= '?' . http_build_query($params, '', '&');
             try {

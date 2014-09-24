@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -48,6 +48,8 @@ class PluginInstaller
             $this->makeSureThereAreNoMissingRequirements($metadata);
             $this->copyPluginToDestination($tmpPluginFolder);
 
+            Filesystem::deleteAllCacheOnUpdate($this->pluginName);
+
         } catch (\Exception $e) {
 
             $this->removeFileIfExists($tmpPluginZip);
@@ -77,6 +79,8 @@ class PluginInstaller
 
             $this->fixPluginFolderIfNeeded($tmpPluginFolder);
             $this->copyPluginToDestination($tmpPluginFolder);
+
+            Filesystem::deleteAllCacheOnUpdate($this->pluginName);
 
         } catch (\Exception $e) {
 

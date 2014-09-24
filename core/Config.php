@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,13 +13,13 @@ use Exception;
 
 /**
  * Singleton that provides read & write access to Piwik's INI configuration.
- * 
+ *
  * This class reads and writes to the `config/config.ini.php` file. If config
  * options are missing from that file, this class will look for their default
  * values in `config/global.ini.php`.
- * 
+ *
  * ### Examples
- * 
+ *
  * **Getting a value:**
  *
  *     // read the minimum_memory_limit option under the [General] section
@@ -30,12 +30,12 @@ use Exception;
  *     // set the minimum_memory_limit option
  *     Config::getInstance()->General['minimum_memory_limit'] = 256;
  *     Config::getInstance()->forceSave();
- * 
+ *
  * **Setting an entire section:**
- * 
+ *
  *     Config::getInstance()->MySection = array('myoption' => 1);
  *     Config::getInstance()->forceSave();
- * 
+ *
  * @method static \Piwik\Config getInstance()
  */
 class Config extends Singleton
@@ -135,7 +135,6 @@ class Config extends Singleton
 
         // Ensure local mods do not affect tests
         if (empty($pathGlobal)) {
-            $this->configCache['log'] = $this->configGlobal['log'];
             $this->configCache['Debug'] = $this->configGlobal['Debug'];
             $this->configCache['mail'] = $this->configGlobal['mail'];
             $this->configCache['General'] = $this->configGlobal['General'];
@@ -143,21 +142,12 @@ class Config extends Singleton
             $this->configCache['Tracker'] = $this->configGlobal['Tracker'];
             $this->configCache['Deletelogs'] = $this->configGlobal['Deletelogs'];
             $this->configCache['Deletereports'] = $this->configGlobal['Deletereports'];
+            $this->configCache['Development'] = $this->configGlobal['Development'];
         }
 
         // for unit tests, we set that no plugin is installed. This will force
         // the test initialization to create the plugins tables, execute ALTER queries, etc.
         $this->configCache['PluginsInstalled'] = array('PluginsInstalled' => array());
-
-        // DevicesDetection plugin is not yet enabled by default
-        if (isset($configGlobal['Plugins'])) {
-            $this->configCache['Plugins'] = $this->configGlobal['Plugins'];
-            $this->configCache['Plugins']['Plugins'][] = 'DevicesDetection';
-        }
-        if (isset($configGlobal['Plugins_Tracker'])) {
-            $this->configCache['Plugins_Tracker'] = $this->configGlobal['Plugins_Tracker'];
-            $this->configCache['Plugins_Tracker']['Plugins_Tracker'][] = 'DevicesDetection';
-        }
     }
 
     /**
@@ -393,6 +383,7 @@ class Config extends Singleton
             }
         } else {
             $values = htmlentities($values, ENT_COMPAT, 'UTF-8');
+            $values = str_replace('$', '&#36;', $values);
         }
         return $values;
     }
@@ -644,7 +635,6 @@ class Config extends Singleton
         }
         return false;
     }
-
 
     /**
      * Write user configuration file

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -35,7 +35,6 @@ class LastSeenTimeLogger
     public function logCurrentUserLastSeenTime()
     {
         $module = Common::getRequestVar('module', false);
-        $action = Common::getRequestVar('action', false);
         $currentUserLogin = Piwik::getCurrentUserLogin();
 
         // only log time for non-anonymous visits to the reporting UI

@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -13,7 +13,7 @@
 
     /**
      * This class is deprecated. Use server-side events instead.
-     * 
+     *
      * @deprecated
      */
     var TrackingCodeGenerator = function () {
@@ -162,6 +162,7 @@
                     customCampaignNameQueryParam: null,
                     customCampaignKeywordParam: null,
                     doNotTrack: $('#javascript-tracking-do-not-track').is(':checked') ? 1 : 0,
+                    disableCookies: $('#javascript-tracking-disable-cookies').is(':checked') ? 1 : 0
                 };
 
                 if ($('#custom-campaign-query-params-check').is(':checked')) {
@@ -195,7 +196,7 @@
                 // get data used to generate the link
                 var generateDataParams = {
                     piwikUrl: piwikHost + piwikPath,
-                    actionName: $('#image-tracker-action-name').val(),
+                    actionName: $('#image-tracker-action-name').val()
                 };
 
                 if ($('#image-tracking-goal-check').is(':checked')) {

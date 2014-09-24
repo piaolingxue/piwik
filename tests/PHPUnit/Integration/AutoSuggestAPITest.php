@@ -1,17 +1,25 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link    http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+namespace Piwik\Tests\Integration;
+
 use Piwik\API\Request;
 use Piwik\Date;
+use Piwik\Tests\IntegrationTestCase;
+use Piwik\Tests\Fixtures\ManyVisitsWithGeoIP;
+use Piwik\Tests\Fixture;
 
 /**
  * testing a the auto suggest API for all known segments
+ *
+ * @group AutoSuggestAPITest
+ * @group Integration
  */
-class Test_Piwik_Integration_AutoSuggestAPITest extends IntegrationTestCase
+class AutoSuggestAPITest extends IntegrationTestCase
 {
     public static $fixture = null; // initialized below class definition
 
@@ -20,7 +28,6 @@ class Test_Piwik_Integration_AutoSuggestAPITest extends IntegrationTestCase
 
     /**
      * @dataProvider getApiForTesting
-     * @group        Integration
      */
     public function testApi($api, $params)
     {
@@ -59,7 +66,6 @@ class Test_Piwik_Integration_AutoSuggestAPITest extends IntegrationTestCase
         return $apiForTesting;
     }
 
-
     /**
      * @param $idSite
      * @param $segment
@@ -76,7 +82,6 @@ class Test_Piwik_Integration_AutoSuggestAPITest extends IntegrationTestCase
     /**
      * @depends      testApi
      * @dataProvider getAnotherApiForTesting
-     * @group        Integration
      */
     public function testAnotherApi($api, $params)
     {
@@ -88,7 +93,7 @@ class Test_Piwik_Integration_AutoSuggestAPITest extends IntegrationTestCase
                 . '&format=php&serialize=0'
         );
         $response = $request->process();
-        $this->checkRequestResponse($response);
+        $this->assertApiResponseHasNoError($response);
         $topSegmentValue = @$response[0];
 
         if ($topSegmentValue !== false && !is_null($topSegmentValue)) {
@@ -124,13 +129,12 @@ class Test_Piwik_Integration_AutoSuggestAPITest extends IntegrationTestCase
     }
 
     /**
-     * @group Integration
      * @depends      testAnotherApi
      */
     public function testCheckOtherTestsWereComplete()
     {
-        // Check that only a few haven't been tested specifically (these are all custom variables slots since we only test slot 1, 2, 5 (see the fixture))
-        $maximumSegmentsToSkip = 11;
+        // Check that only a few haven't been tested specifically (these are all custom variables slots since we only test slot 1, 2, 5 (see the fixture) and example dimension slots)
+        $maximumSegmentsToSkip = 16;
         $this->assertTrue(count(self::$skipped) <= $maximumSegmentsToSkip, 'SKIPPED ' . count(self::$skipped) . ' segments --> some segments had no "auto-suggested values"
             but we should try and test the autosuggest for all new segments. Segments skipped were: ' . implode(', ', self::$skipped));
 
@@ -140,5 +144,5 @@ class Test_Piwik_Integration_AutoSuggestAPITest extends IntegrationTestCase
     }
 }
 
-Test_Piwik_Integration_AutoSuggestAPITest::$fixture = new Test_Piwik_Fixture_ManyVisitsWithGeoIP();
-Test_Piwik_Integration_AutoSuggestAPITest::$fixture->dateTime = Date::yesterday()->subDay(30)->getDatetime();
+AutoSuggestAPITest::$fixture = new ManyVisitsWithGeoIP();
+AutoSuggestAPITest::$fixture->dateTime = Date::yesterday()->subDay(30)->getDatetime();

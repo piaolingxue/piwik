@@ -1,10 +1,12 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+namespace Piwik\Tests\Integration;
+
 use Piwik\Archive;
 use Piwik\ArchiveProcessor\Rules;
 use Piwik\Common;
@@ -23,13 +25,19 @@ use Piwik\Plugins\VisitorInterest\API as APIVisitorInterest;
 use Piwik\Site;
 use Piwik\Tracker\Cache;
 use Piwik\Tracker\GoalManager;
+use Piwik\Tests\IntegrationTestCase;
+use Piwik\Tests\Fixture;
 
 require_once 'PrivacyManager/PrivacyManager.php';
 
+/**
+ * @group PrivacyManagerTest
+ * @group Integration
+ */
 class PrivacyManagerTest extends IntegrationTestCase
 {
     // constants used in checking whether numeric tables are populated correctly.
-    // 'done' entries exist for every period, even if there's no metric data, so we need the 
+    // 'done' entries exist for every period, even if there's no metric data, so we need the
     // total archive count for each month.
     const TOTAL_JAN_ARCHIVE_COUNT = 37; // 31 + 4 + 1 + 1;
     const TOTAL_FEB_ARCHIVE_COUNT = 34; // 29 + 4 + 1;
@@ -65,12 +73,12 @@ class PrivacyManagerTest extends IntegrationTestCase
 
         // Temporarily disable the purge of old archives so that getNumeric('nb_visits')
         // in _addReportData does not trigger the data purge of data we've just imported
-        Rules::$purgeDisabledByTests = true;
+        \Piwik\ArchiveProcessor\Rules::disablePurgeOutdatedArchives();
 
         self::_addLogData();
         self::_addReportData();
 
-        Rules::$purgeDisabledByTests = false;
+        \Piwik\ArchiveProcessor\Rules::enablePurgeOutdatedArchives();
 
         self::$dbData = self::getDbTablesWithData();
     }
@@ -134,8 +142,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Make sure the first time deleteLogData is run, nothing happens.
-     *
-     * @group Integration
      */
     public function testDeleteLogDataInitialRun()
     {
@@ -153,8 +159,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Make sure the first time deleteReportData is run, nothing happens.
-     *
-     * @group Integration
      */
     public function testDeleteReportDataInitialRun()
     {
@@ -169,8 +173,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Make sure the task is not run when its scheduled for later.
-     *
-     * @group Integration
      */
     public function testPurgeDataNotTimeToRun()
     {
@@ -188,8 +190,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Make sure purging data runs when scheduled.
-     *
-     * @group Integration
      */
     public function testPurgeDataNotInitialAndTimeToRun()
     {
@@ -234,8 +234,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Make sure nothing happens when deleting logs & reports are both disabled.
-     *
-     * @group Integration
      */
     public function testPurgeDataBothDisabled()
     {
@@ -263,8 +261,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Test that purgeData works when there's no data.
-     *
-     * @group Integration
      */
     public function testPurgeDataDeleteLogsNoData()
     {
@@ -301,8 +297,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Test that purgeData works correctly when the 'keep basic metrics' setting is set to true.
-     *
-     * @group Integration
      */
     public function testPurgeDataDeleteReportsKeepBasicMetrics()
     {
@@ -357,8 +351,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Test that purgeData works correctly when the 'keep daily reports' setting is set to true.
-     *
-     * @group Integration
      */
     public function testPurgeDataDeleteReportsKeepDailyReports()
     {
@@ -393,8 +385,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Test that purgeData works correctly when the 'keep weekly reports' setting is set to true.
-     *
-     * @group Integration
      */
     public function testPurgeDataDeleteReportsKeepWeeklyReports()
     {
@@ -429,8 +419,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Test that purgeData works correctly when the 'keep monthly reports' setting is set to true.
-     *
-     * @group Integration
      */
     public function testPurgeDataDeleteReportsKeepMonthlyReports()
     {
@@ -465,8 +453,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Test that purgeData works correctly when the 'keep yearly reports' setting is set to true.
-     *
-     * @group Integration
      */
     public function testPurgeDataDeleteReportsKeepYearlyReports()
     {
@@ -501,8 +487,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Test no concurrency issues when deleting log data from log_action table.
-     *
-     * @group Integration
      */
     public function testPurgeLogDataConcurrency()
     {
@@ -532,8 +516,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Tests that purgeData works correctly when the 'keep range reports' setting is set to true.
-     *
-     * @group Integration
      */
     public function testPurgeDataDeleteReportsKeepRangeReports()
     {
@@ -568,8 +550,6 @@ class PrivacyManagerTest extends IntegrationTestCase
 
     /**
      * Tests that purgeData works correctly when the 'keep segment reports' setting is set to true.
-     *
-     * @group Integration
      */
     public function testPurgeDataDeleteReportsKeepSegmentsReports()
     {
@@ -633,7 +613,7 @@ class PrivacyManagerTest extends IntegrationTestCase
 
         $start = Date::factory(self::$dateTime);
         self::$idSite = Fixture::createWebsite('2012-01-01', $ecommerce = 1);
-        $idGoal = APIGoals::getInstance()->addGoal(self::$idSite, 'match all', 'url', 'http', 'contains');
+        APIGoals::getInstance()->addGoal(self::$idSite, 'match all', 'url', 'http', 'contains');
 
         $t = Fixture::getTracker(self::$idSite, $start, $defaultInit = true);
         $t->enableBulkTracking();
@@ -675,7 +655,6 @@ class PrivacyManagerTest extends IntegrationTestCase
         $archive = Archive::build(self::$idSite, 'year', $date);
 
         APIVisitorInterest::getInstance()->getNumberOfVisitsPerVisitDuration(self::$idSite, 'year', $date);
-//        APIVisitorInterest::getInstance()->get(self::$idSite, 'month', $date, $segment = false, self::$idSite);
 
         // months are added via the 'year' period, but weeks must be done manually
         for ($daysAgo = self::$daysAgoStart; $daysAgo > 0; $daysAgo -= 7) // every week
@@ -773,7 +752,6 @@ class PrivacyManagerTest extends IntegrationTestCase
         $janMetricCount = $this->_getExpectedNumericArchiveCountJan();
         $this->assertEquals($janMetricCount, $this->_getTableCount($archiveTables['numeric'][0])); // January
 
-
         // no range metric for february
         $febMetricCount = $this->_getExpectedNumericArchiveCountFeb();
         $this->assertEquals($febMetricCount, $this->_getTableCount($archiveTables['numeric'][1])); // February
@@ -833,7 +811,6 @@ class PrivacyManagerTest extends IntegrationTestCase
             return;
         }
 
-        $tempTableName = Common::prefixTable(LogDataPurger::TEMP_TABLE_NAME);
         $logLinkVisitActionTable = Common::prefixTable("log_link_visit_action");
 
         $sql = "INSERT INTO $logLinkVisitActionTable
@@ -916,4 +893,3 @@ class PrivacyManagerTest extends IntegrationTestCase
         return $eventsId;
     }
 }
-

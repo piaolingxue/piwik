@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -44,6 +44,13 @@ class ArchiveWriter
      * @var int
      */
     const DONE_OK_TEMPORARY = 3;
+
+    /**
+     * Flag indicated that archive is done but was marked as invalid later and needs to be re-processed during next archiving process
+     *
+     * @var int
+     */
+    const DONE_INVALIDATED = 4;
 
     protected $fields = array('idarchive',
                               'idsite',
@@ -116,7 +123,7 @@ class ArchiveWriter
         $this->logArchiveStatusAsFinal();
     }
 
-    static protected function compress($data)
+    protected static function compress($data)
     {
         if (Db::get()->hasBlobDataType()) {
             return gzcompress($data);
@@ -266,7 +273,7 @@ class ArchiveWriter
 
         $tableName = $this->getTableNameToInsert($value);
 
-        // duplicate idarchives are Ignored, see http://dev.piwik.org/trac/ticket/987
+        // duplicate idarchives are Ignored, see https://github.com/piwik/piwik/issues/987
         $query = "INSERT IGNORE INTO " . $tableName . "
 					(" . implode(", ", $this->getInsertFields()) . ")
 					VALUES (?,?,?,?,?,?,?,?)";

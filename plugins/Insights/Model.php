@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -83,9 +83,9 @@ class Model
         return $totalValue;
     }
 
-    public function getTotalValue($idSite, $period, $date, $metric)
+    public function getTotalValue($idSite, $period, $date, $metric, $segment)
     {
-        $visits   = VisitsSummaryAPI::getInstance()->get($idSite, $period, $date, false, array($metric));
+        $visits   = VisitsSummaryAPI::getInstance()->get($idSite, $period, $date, $segment, array($metric));
         $firstRow = $visits->getFirstRow();
 
         if (empty($firstRow)) {

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,7 +12,7 @@ use Exception;
 
 /**
  * Contains helper methods that can be used to get common Piwik settings.
- * 
+ *
  */
 class SettingsPiwik
 {
@@ -63,27 +63,27 @@ class SettingsPiwik
              * Triggered during the cron archiving process to collect segments that
              * should be pre-processed for all websites. The archiving process will be launched
              * for each of these segments when archiving data.
-             * 
+             *
              * This event can be used to add segments to be pre-processed. If your plugin depends
              * on data from a specific segment, this event could be used to provide enhanced
              * performance.
-             * 
+             *
              * _Note: If you just want to add a segment that is managed by the user, use the
              * SegmentEditor API._
-             * 
+             *
              * **Example**
-             * 
+             *
              *     Piwik::addAction('Segments.getKnownSegmentsToArchiveAllSites', function (&$segments) {
              *         $segments[] = 'country=jp;city=Tokyo';
              *     });
-             * 
+             *
              * @param array &$segmentsToProcess List of segment definitions, eg,
-             *                                  
+             *
              *                                      array(
              *                                          'browserCode=ff;resolution=800x600',
              *                                          'country=jp;city=Tokyo'
              *                                      )
-             *                                  
+             *
              *                                  Add segments to this array in your event handler.
              */
             Piwik::postEvent('Segments.getKnownSegmentsToArchiveAllSites', array(&$segmentsToProcess));
@@ -97,7 +97,7 @@ class SettingsPiwik
     /**
      * Returns the list of stored segments to pre-process for an individual site when executing
      * cron archiving.
-     * 
+     *
      * @param int $idSite The ID of the site to get stored segments for.
      * @return string The list of stored segments that apply to the requested site.
      */
@@ -109,25 +109,25 @@ class SettingsPiwik
          * Triggered during the cron archiving process to collect segments that
          * should be pre-processed for one specific site. The archiving process will be launched
          * for each of these segments when archiving data for that one site.
-         * 
+         *
          * This event can be used to add segments to be pre-processed for one site.
-         * 
+         *
          * _Note: If you just want to add a segment that is managed by the user, you should use the
          * SegmentEditor API._
-         * 
+         *
          * **Example**
-         * 
+         *
          *     Piwik::addAction('Segments.getKnownSegmentsToArchiveForSite', function (&$segments, $idSite) {
          *         $segments[] = 'country=jp;city=Tokyo';
          *     });
-         * 
+         *
          * @param array &$segmentsToProcess List of segment definitions, eg,
-         *                                  
+         *
          *                                      array(
          *                                          'browserCode=ff;resolution=800x600',
          *                                          'country=JP;city=Tokyo'
          *                                      )
-         *                                  
+         *
          *                                  Add segments to this array in your event handler.
          * @param int $idSite The ID of the site to get segments for.
          */
@@ -191,7 +191,7 @@ class SettingsPiwik
      */
     public static function isPiwikInstalled()
     {
-        $config = Config::getInstance()->getLocalConfigPath();
+        $config = Config::getInstance()->getLocalPath();
         $exists = file_exists($config);
 
         // Piwik is installed if the config file is found
@@ -231,7 +231,7 @@ class SettingsPiwik
 
     /**
      * Returns true if unique visitors should be processed for the given period type.
-     * 
+     *
      * Unique visitor processing is controlled by the `[General] enable_processing_unique_visitors_...`
      * INI config options. By default, unique visitors are processed only for day/week/month periods.
      *
@@ -292,10 +292,14 @@ class SettingsPiwik
     /**
      * Returns true if the Piwik server appears to be working.
      *
+     * If the Piwik server is in an error state (eg. some directories are not writable and Piwik displays error message),
+     * or if the Piwik server is "offline",
+     * this will return false..
+     *
      * @param $piwikServerUrl
      * @return bool
      */
-    static public function checkPiwikServerWorking($piwikServerUrl, $acceptInvalidSSLCertificates = false)
+    public static function checkPiwikServerWorking($piwikServerUrl, $acceptInvalidSSLCertificates = false)
     {
         // Now testing if the webserver is running
         try {
@@ -319,7 +323,10 @@ class SettingsPiwik
         $expectedString = 'misc/user/';
 
         $expectedStringNotFound = strpos($fetched, $expectedString) === false && strpos($fetched, $expectedStringAlt) === false;
-        if ($expectedStringNotFound) {
+
+        $hasError = false !== strpos($fetched, PAGE_TITLE_WHEN_ERROR);
+
+        if ($hasError || $expectedStringNotFound) {
             throw new Exception("\nPiwik should be running at: "
                 . $piwikServerUrl
                 . " but this URL returned an unexpected response: '"

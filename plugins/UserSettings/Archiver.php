@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -151,15 +151,24 @@ class Archiver extends \Piwik\Plugin\Archiver
     {
         $query = $this->getLogAggregator()->queryVisitsByDimension(array("label" => self::LANGUAGE_DIMENSION));
         $languageCodes = array_keys(Common::getLanguagesList());
+        $countryCodes = Common::getCountriesList($includeInternalCodes = true);
         $metricsByLanguage = new DataArray();
+
         while ($row = $query->fetch()) {
-            $code = Common::extractLanguageCodeFromBrowserLanguage($row['label'], $languageCodes);
-            $metricsByLanguage->sumMetricsVisits($code, $row);
+            $langCode = Common::extractLanguageCodeFromBrowserLanguage($row['label'], $languageCodes);
+            $countryCode = Common::extractCountryCodeFromBrowserLanguage($row['label'], $countryCodes, $enableLanguageToCountryGuess = true);
+
+            if ($countryCode == 'xx' || $countryCode == $langCode) {
+                $metricsByLanguage->sumMetricsVisits($langCode, $row);
+            } else {
+                $metricsByLanguage->sumMetricsVisits($langCode . '-' . $countryCode, $row);
+            }
         }
 
         $report = $metricsByLanguage->asDataTable();
         $this->insertTable(self::LANGUAGE_RECORD_NAME, $report);
     }
+
 
     protected function insertTable($recordName, DataTable $table)
     {

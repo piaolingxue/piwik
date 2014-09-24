@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -104,11 +104,11 @@ class API extends \Piwik\Plugin\API
         $dataTables = array($dataTable);
 
         if (!($dataTable instanceof DataTable\Map)) {
-            foreach ($dataTables AS $table) {
+            foreach ($dataTables as $table) {
                 if ($table->getRowsCount() == 0) {
                     continue;
                 }
-                foreach ($requiredRows AS $requiredRow => $key) {
+                foreach ($requiredRows as $requiredRow => $key) {
                     $row = $table->getRowFromLabel($requiredRow);
                     if (empty($row)) {
                         $table->addRowsFromSimpleArray(array(
@@ -184,14 +184,14 @@ class API extends \Piwik\Plugin\API
         // walk through the results and calculate the percentage
         foreach ($dataTableMap as $key => $table) {
             // get according browserType table
-            foreach ($browserTypesArray AS $k => $browsers) {
+            foreach ($browserTypesArray as $k => $browsers) {
                 if ($k == $key) {
                     $browserType = $browsers;
                 }
             }
 
             // get according visitsSum
-            foreach ($visitSumsArray AS $k => $visits) {
+            foreach ($visitSumsArray as $k => $visits) {
                 if ($k == $key) {
                     if (is_object($visits)) {
                         if ($visits->getRowsCount() == 0) {
@@ -236,8 +236,17 @@ class API extends \Piwik\Plugin\API
     public function getLanguage($idSite, $period, $date, $segment = false)
     {
         $dataTable = $this->getDataTable(Archiver::LANGUAGE_RECORD_NAME, $idSite, $period, $date, $segment);
+        $dataTable->filter('GroupBy', array('label', __NAMESPACE__ . '\groupByLangCallback'));
         $dataTable->filter('ColumnCallbackReplace', array('label', __NAMESPACE__ . '\languageTranslate'));
-        $dataTable->filter('ReplaceColumnNames');
+
+        return $dataTable;
+    }
+
+    public function getLanguageCode($idSite, $period, $date, $segment = false)
+    {
+        $dataTable = $this->getDataTable(Archiver::LANGUAGE_RECORD_NAME, $idSite, $period, $date, $segment);
+        $dataTable->filter('ColumnCallbackReplace', array('label', __NAMESPACE__ . '\languageTranslateWithCode'));
+
         return $dataTable;
     }
 }

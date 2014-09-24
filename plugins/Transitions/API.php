@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -128,7 +128,6 @@ class API extends \Piwik\Plugin\API
      */
     private function deriveIdAction($actionName, $actionType)
     {
-        $actionsPlugin = new Actions;
         switch ($actionType) {
             case 'url':
                 $originalActionName = $actionName;

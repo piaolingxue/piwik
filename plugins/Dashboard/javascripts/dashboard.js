@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -279,7 +279,7 @@ function copyDashboardToUser() {
 
     $.extend(DashboardManagerControl.prototype, DashboardSettingsControlBase.prototype, {
         onOpen: function () {
-            if ($('#dashboardWidgetsArea').dashboard('isDefaultDashboard')) { 
+            if ($('#dashboardWidgetsArea').dashboard('isDefaultDashboard')) {
                 $('.removeDashboardLink', this.$element).hide();
             } else {
                 $('.removeDashboardLink', this.$element).show();

@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -45,19 +45,22 @@ angular.module('piwikApp').factory('siteSelectorModel', function (piwikApi, $fil
         }
 
         if (model.isLoading) {
-            piwikApi.abort();
+            model.currentRequest.abort();
         }
 
         model.isLoading = true;
 
-        return piwikApi.fetch({
+        model.currentRequest = piwikApi.fetch({
             method: 'SitesManager.getPatternMatchSites',
             pattern: term
         }).then(function (response) {
             return model.updateWebsitesList(response);
         })['finally'](function () {    // .finally() is not IE8 compatible see https://github.com/angular/angular.js/commit/f078762d48d0d5d9796dcdf2cb0241198677582c
             model.isLoading = false;
+            model.currentRequest = null;
         });
+
+        return model.currentRequest;
     };
 
     model.loadSite = function (idsite) {

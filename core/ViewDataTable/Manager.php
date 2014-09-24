@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -18,6 +18,7 @@ use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Bar;
 use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Pie;
 use Piwik\Plugins\Goals\Visualizations\Goals;
 use Piwik\Plugins\Insights\Visualizations\Insight;
+use Piwik\Plugin\Manager as PluginManager;
 
 /**
  * ViewDataTable Manager.
@@ -62,23 +63,27 @@ class Manager
      */
     public static function getAvailableViewDataTables()
     {
+        $klassToExtend = '\\Piwik\\Plugin\\ViewDataTable';
+
         /** @var string[] $visualizations */
-        $visualizations = array();
+        $visualizations = PluginManager::getInstance()->findMultipleComponents('Visualizations', $klassToExtend);
 
         /**
          * Triggered when gathering all available DataTable visualizations.
-         * 
+         *
          * Plugins that want to expose new DataTable visualizations should subscribe to
          * this event and add visualization class names to the incoming array.
-         * 
+         *
          * **Example**
-         * 
+         *
          *     public function addViewDataTable(&$visualizations)
          *     {
          *         $visualizations[] = 'Piwik\\Plugins\\MyPlugin\\MyVisualization';
          *     }
-         * 
+         *
          * @param array &$visualizations The array of all available visualizations.
+         * @ignore
+         * @deprecated since 2.5.0 Place visualization in a "Visualizations" directory instead.
          */
         Piwik::postEvent('ViewDataTable.addViewDataTable', array(&$visualizations));
 
@@ -89,7 +94,7 @@ class Manager
                 throw new \Exception("Invalid visualization class '$viz' found in Visualization.getAvailableVisualizations.");
             }
 
-            if (!is_subclass_of($viz, '\\Piwik\\Plugin\\ViewDataTable')) {
+            if (!is_subclass_of($viz, $klassToExtend)) {
                 throw new \Exception("ViewDataTable class '$viz' does not extend Plugin/ViewDataTable");
             }
 
@@ -168,7 +173,7 @@ class Manager
         if ($view->config->show_goals) {
             $goalButton = static::getFooterIconFor(Goals::ID);
             if (Common::getRequestVar('idGoal', false) == 'ecommerceOrder') {
-                $goalButton['icon'] = 'plugins/Zeitgeist/images/ecommerceOrder.gif';
+                $goalButton['icon'] = 'plugins/Morpheus/images/ecommerceOrder.gif';
             }
 
             $normalViewIcons['buttons'][] = $goalButton;
@@ -178,14 +183,14 @@ class Manager
             $normalViewIcons['buttons'][] = array(
                 'id'    => 'ecommerceOrder',
                 'title' => Piwik::translate('General_EcommerceOrders'),
-                'icon'  => 'plugins/Zeitgeist/images/ecommerceOrder.gif',
+                'icon'  => 'plugins/Morpheus/images/ecommerceOrder.gif',
                 'text'  => Piwik::translate('General_EcommerceOrders')
             );
 
             $normalViewIcons['buttons'][] = array(
                 'id'    => 'ecommerceAbandonedCart',
                 'title' => Piwik::translate('General_AbandonedCarts'),
-                'icon'  => 'plugins/Zeitgeist/images/ecommerceAbandonedCart.gif',
+                'icon'  => 'plugins/Morpheus/images/ecommerceAbandonedCart.gif',
                 'text'  => Piwik::translate('General_AbandonedCarts')
             );
         }
@@ -237,7 +242,9 @@ class Manager
 
         $graphViewIcons['buttons'] = array_filter($graphViewIcons['buttons']);
 
-        if (!empty($insightsViewIcons['buttons'])) {
+        if (!empty($insightsViewIcons['buttons'])
+            && $view->config->show_insights
+        ) {
             $result[] = $insightsViewIcons;
         }
 
@@ -303,10 +310,14 @@ class Manager
 
         foreach ($parametersToOverride as $key => $value) {
             if ($key === 'viewDataTable'
-                && !empty($params['columns'])
                 && !empty($params[$key])
                 && $params[$key] !== $value) {
-                unset($params['columns']);
+                if (!empty($params['columns'])) {
+                    unset($params['columns']);
+                }
+                if (!empty($params['columns_to_display'])) {
+                    unset($params['columns_to_display']);
+                }
             }
 
             $params[$key] = $value;

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -161,7 +161,13 @@ class ReportTotalsCalculator extends DataTableManipulator
             }
         }
 
-        return $this->callApiAndReturnDataTable($module, $action, $request);
+        $table = $this->callApiAndReturnDataTable($module, $action, $request);
+
+        if ($table instanceof DataTable\Map) {
+            $table = $table->mergeChildren();
+        }
+
+        return $table;
     }
 
     private function sumColumnValueToTotal(Row $row, $metricId, $totalValues)

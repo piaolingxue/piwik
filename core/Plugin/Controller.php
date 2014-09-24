@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -19,6 +19,7 @@ use Piwik\DataTable\Filter\CalculateEvolutionFilter;
 use Piwik\Date;
 use Piwik\FrontController;
 use Piwik\Menu\MenuTop;
+use Piwik\Menu\MenuUser;
 use Piwik\NoAccessException;
 use Piwik\Notification\Manager as NotificationManager;
 use Piwik\Period\Month;
@@ -28,8 +29,7 @@ use Piwik\Piwik;
 use Piwik\Plugins\CoreAdminHome\CustomLogo;
 use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Evolution;
 use Piwik\Plugins\LanguagesManager\LanguagesManager;
-use Piwik\Plugins\SitesManager\API as APISitesManager;
-use Piwik\Plugins\UsersManager\API as APIUsersManager;
+use Piwik\Plugins\UsersManager\UserPreferences;
 use Piwik\Registry;
 use Piwik\SettingsPiwik;
 use Piwik\Site;
@@ -40,18 +40,18 @@ use Piwik\ViewDataTable\Factory as ViewDataTableFactory;
 
 /**
  * Base class of all plugin Controllers.
- * 
+ *
  * Plugins that wish to add display HTML should create a Controller that either
  * extends from this class or from {@link ControllerAdmin}. Every public method in
  * the controller will be exposed as a controller method and can be invoked via
  * an HTTP request.
- * 
+ *
  * Learn more about Piwik's MVC system [here](/guides/mvc-in-piwik).
- * 
+ *
  * ### Examples
- * 
+ *
  * **Defining a controller**
- * 
+ *
  *     class Controller extends \Piwik\Plugin\Controller
  *     {
  *         public function index()
@@ -61,17 +61,17 @@ use Piwik\ViewDataTable\Factory as ViewDataTableFactory;
  *             return $view->render();
  *         }
  *     }
- * 
+ *
  * **Linking to a controller action**
  *
  *     <a href="?module=MyPlugin&action=index&idSite=1&period=day&date=2013-10-10">Link</a>
- * 
+ *
  */
 abstract class Controller
 {
     /**
      * The plugin name, eg. `'Referrers'`.
-     * 
+     *
      * @var string
      * @api
      */
@@ -95,7 +95,7 @@ abstract class Controller
 
     /**
      * The value of the **idSite** query parameter.
-     * 
+     *
      * @var int
      * @api
      */
@@ -103,7 +103,7 @@ abstract class Controller
 
     /**
      * The Site object created with {@link $idSite}.
-     * 
+     *
      * @var Site
      * @api
      */
@@ -111,7 +111,7 @@ abstract class Controller
 
     /**
      * Constructor.
-     * 
+     *
      * @api
      */
     public function __construct()
@@ -249,9 +249,59 @@ abstract class Controller
     }
 
     /**
+     * Assigns the given variables to the template and renders it.
+     *
+     * Example:
+     *
+     *     public function myControllerAction () {
+     *        return $this->renderTemplate('index', array(
+     *            'answerToLife' => '42'
+     *        ));
+     *     }
+     *
+     * This will render the 'index.twig' file within the plugin templates folder and assign the view variable
+     * `answerToLife` to `42`.
+     *
+     * @param string $template   The name of the template file. If only a name is given it will automatically use
+     *                           the template within the plugin folder. For instance 'myTemplate' will result in
+     *                           '@$pluginName/myTemplate.twig'. Alternatively you can include the full path:
+     *                           '@anyOtherFolder/otherTemplate'. The trailing '.twig' is not needed.
+     * @param array $variables   For instance array('myViewVar' => 'myValue'). In template you can use {{ myViewVar }}
+     * @return string
+     * @since 2.5.0
+     * @api
+     */
+    protected function renderTemplate($template, array $variables = array())
+    {
+        if (false === strpos($template, '@') || false === strpos($template, '/')) {
+            $template = '@' . $this->pluginName . '/' . $template;
+        }
+
+        $view = new View($template);
+
+        // alternatively we could check whether the templates extends either admin.twig or dashboard.twig and based on
+        // that call the correct method. This will be needed once we unify Controller and ControllerAdmin see
+        // https://github.com/piwik/piwik/issues/6151
+        if ($this instanceof ControllerAdmin) {
+            $this->setBasicVariablesView($view);
+        } elseif (empty($this->site) || empty($this->idSite)) {
+            $this->setBasicVariablesView($view);
+        } else {
+            $this->setGeneralVariablesView($view);
+        }
+
+        foreach ($variables as $key => $value) {
+            $view->$key = $value;
+        }
+
+        return $view->render();
+    }
+
+    /**
      * Convenience method that creates and renders a ViewDataTable for a API method.
      *
-     * @param string $apiAction The name of the API action (eg, `'getResolution'`).
+     * @param string|\Piwik\Plugin\Report $apiAction The name of the API action (eg, `'getResolution'`) or
+     *                                      an instance of an report.
      * @param bool $controllerAction The name of the Controller action name  that is rendering the report. Defaults
      *                               to the `$apiAction`.
      * @param bool $fetch If `true`, the rendered string is returned, if `false` it is `echo`'d.
@@ -262,6 +312,21 @@ abstract class Controller
      */
     protected function renderReport($apiAction, $controllerAction = false)
     {
+        if (empty($controllerAction) && is_string($apiAction)) {
+            $report = Report::factory($this->pluginName, $apiAction);
+
+            if (!empty($report)) {
+                $apiAction = $report;
+            }
+        }
+
+        if ($apiAction instanceof Report) {
+            $this->checkSitePermission();
+            $apiAction->checkIsEnabled();
+
+            return $apiAction->render();
+        }
+
         $pluginName = $this->pluginName;
 
         /** @var Proxy $apiProxy */
@@ -428,11 +493,11 @@ abstract class Controller
 
     /**
      * Returns a URL to a sparkline image for a report served by the current plugin.
-     * 
+     *
      * The result of this URL should be used with the [sparkline()](/api-reference/Piwik/View#twig) twig function.
-     * 
+     *
      * The current site ID and period will be used.
-     * 
+     *
      * @param string $action Method name of the controller that serves the report.
      * @param array $customParameters The array of query parameter name/value pairs that
      *                                should be set in result URL.
@@ -488,9 +553,9 @@ abstract class Controller
 
     /**
      * Assigns variables to {@link Piwik\View} instances that display an entire page.
-     * 
+     *
      * The following variables assigned:
-     * 
+     *
      * **date** - The value of the **date** query parameter.
      * **idSite** - The value of the **idSite** query parameter.
      * **rawDate** - The value of the **date** query parameter.
@@ -503,11 +568,11 @@ abstract class Controller
      * **config_action_url_category_delimiter** - The value of the `[General] action_url_category_delimiter`
      *                                            INI config option.
      * **topMenu** - The result of `MenuTop::getInstance()->getMenu()`.
-     * 
+     *
      * As well as the variables set by {@link setPeriodVariablesView()}.
-     * 
+     *
      * Will exit on error.
-     * 
+     *
      * @param View $view
      * @return void
      * @api
@@ -518,10 +583,7 @@ abstract class Controller
 
         try {
             $view->idSite = $this->idSite;
-            if (empty($this->site) || empty($this->idSite)) {
-                throw new Exception("The requested website idSite is not found in the request, or is invalid.
-				Please check that you are logged in Piwik and have permission to access the specified website.");
-            }
+            $this->checkSitePermission();
             $this->setPeriodVariablesView($view);
 
             $rawDate = Common::getRequestVar('date');
@@ -563,7 +625,8 @@ abstract class Controller
 
             $this->setBasicVariablesView($view);
 
-            $view->topMenu = MenuTop::getInstance()->getMenu();
+            $view->topMenu  = MenuTop::getInstance()->getMenu();
+            $view->userMenu = MenuUser::getInstance()->getMenu();
 
             $notifications = $view->notifications;
             if (empty($notifications)) {
@@ -578,9 +641,9 @@ abstract class Controller
 
     /**
      * Assigns a set of generally useful variables to a {@link Piwik\View} instance.
-     * 
+     *
      * The following variables assigned:
-     * 
+     *
      * **enableMeasurePiwikForSiteId** - The value of the `[Debug] enable_measure_piwik_usage_in_idsite`
      *                                     INI config option.
      * **isSuperUser** - True if the current user is the Super User, false if otherwise.
@@ -593,7 +656,7 @@ abstract class Controller
      * **hasSVGLogo** - True if there is a SVG logo, false if otherwise.
      * **enableFrames** - The value of the `[General] enable_framed_pages` INI config option. If
      *                    true, {@link Piwik\View::setXFrameOptions()} is called on the view.
-     * 
+     *
      * Also calls {@link setHostValidationVariablesView()}.
      *
      * @param View $view
@@ -608,6 +671,10 @@ abstract class Controller
         $view->hasSomeViewAccess  = Piwik::isUserHasSomeViewAccess();
         $view->isUserIsAnonymous  = Piwik::isUserIsAnonymous();
         $view->hasSuperUserAccess = Piwik::hasUserSuperUserAccess();
+
+        if (!Piwik::isUserIsAnonymous()) {
+            $view->emailSuperUser = implode(',', Piwik::getAllSuperUserAccessEmailAddresses());
+        }
 
         $this->addCustomLogoInfo($view);
 
@@ -720,7 +787,7 @@ abstract class Controller
 
     /**
      * Sets general period variables on a view, including:
-     * 
+     *
      * - **displayUniqueVisitors** - Whether unique visitors should be displayed for the current
      *                               period.
      * - **period** - The value of the **period** query parameter.
@@ -753,7 +820,7 @@ abstract class Controller
 
     /**
      * Helper method used to redirect the current HTTP request to another module/action.
-     * 
+     *
      * This function will exit immediately after executing.
      *
      * @param string $moduleToRedirect The plugin to redirect to, eg. `"MultiSites"`.
@@ -767,14 +834,17 @@ abstract class Controller
     public function redirectToIndex($moduleToRedirect, $actionToRedirect, $websiteId = null, $defaultPeriod = null,
                                     $defaultDate = null, $parameters = array())
     {
+
+        $userPreferences = new UserPreferences();
+
         if (empty($websiteId)) {
-            $websiteId = $this->getDefaultWebsiteId();
+            $websiteId = $userPreferences->getDefaultWebsiteId();
         }
         if (empty($defaultDate)) {
-            $defaultDate = $this->getDefaultDate();
+            $defaultDate = $userPreferences->getDefaultDate();
         }
         if (empty($defaultPeriod)) {
-            $defaultPeriod = $this->getDefaultPeriod();
+            $defaultPeriod = $userPreferences->getDefaultPeriod();
         }
         $parametersString = '';
         if (!empty($parameters)) {
@@ -812,87 +882,11 @@ abstract class Controller
     }
 
     /**
-     * Returns default site ID that Piwik should load.
-     * 
-     * _Note: This value is a Piwik setting set by each user._
-     *
-     * @return bool|int
-     * @api
-     */
-    protected function getDefaultWebsiteId()
-    {
-        $defaultWebsiteId = false;
-
-        // User preference: default website ID to load
-        $defaultReport = APIUsersManager::getInstance()->getUserPreference(Piwik::getCurrentUserLogin(), APIUsersManager::PREFERENCE_DEFAULT_REPORT);
-        if (is_numeric($defaultReport)) {
-            $defaultWebsiteId = $defaultReport;
-        }
-
-        if ($defaultWebsiteId && Piwik::isUserHasViewAccess($defaultWebsiteId)) {
-            return $defaultWebsiteId;
-        }
-
-        $sitesId = APISitesManager::getInstance()->getSitesIdWithAtLeastViewAccess();
-        if (!empty($sitesId)) {
-            return $sitesId[0];
-        }
-        return false;
-    }
-
-    /**
-     * Returns default date for Piwik reports.
-     *
-     * _Note: This value is a Piwik setting set by each user._
-     * 
-     * @return string `'today'`, `'2010-01-01'`, etc.
-     * @api
-     */
-    protected function getDefaultDate()
-    {
-        // NOTE: a change in this function might mean a change in plugins/UsersManager/javascripts/usersSettings.js as well
-        $userSettingsDate = APIUsersManager::getInstance()->getUserPreference(Piwik::getCurrentUserLogin(), APIUsersManager::PREFERENCE_DEFAULT_REPORT_DATE);
-        if ($userSettingsDate == 'yesterday') {
-            return $userSettingsDate;
-        }
-        // if last7, last30, etc.
-        if (strpos($userSettingsDate, 'last') === 0
-            || strpos($userSettingsDate, 'previous') === 0
-        ) {
-            return $userSettingsDate;
-        }
-        return 'today';
-    }
-
-    /**
-     * Returns default period type for Piwik reports.
-     *
-     * @return string `'day'`, `'week'`, `'month'`, `'year'` or `'range'`
-     * @api
-     */
-    protected function getDefaultPeriod()
-    {
-        $userSettingsDate = APIUsersManager::getInstance()->getUserPreference(Piwik::getCurrentUserLogin(), APIUsersManager::PREFERENCE_DEFAULT_REPORT_DATE);
-        if ($userSettingsDate === false) {
-            return PiwikConfig::getInstance()->General['default_period'];
-        }
-        if (in_array($userSettingsDate, array('today', 'yesterday'))) {
-            return 'day';
-        }
-        if (strpos($userSettingsDate, 'last') === 0
-            || strpos($userSettingsDate, 'previous') === 0
-        ) {
-            return 'range';
-        }
-        return $userSettingsDate;
-    }
-
-    /**
      * Checks that the token_auth in the URL matches the currently logged-in user's token_auth.
-     * 
+     *
      * This is a protection against CSRF and should be used in all controller
      * methods that modify Piwik or any user settings.
-     * 
+     *
      * **The token_auth should never appear in the browser's address bar.**
      *
      * @throws \Piwik\NoAccessException If the token doesn't match.
@@ -900,7 +894,14 @@ abstract class Controller
      */
     protected function checkTokenInUrl()
     {
-        if (Common::getRequestVar('token_auth', false) != Piwik::getCurrentUserTokenAuth()) {
+        $tokenRequest = Common::getRequestVar('token_auth', false);
+        $tokenUser = Piwik::getCurrentUserTokenAuth();
+
+        if(empty($tokenRequest) && empty($tokenUser)) {
+            return; // UI tests
+        }
+
+        if ($tokenRequest !== $tokenUser) {
             throw new NoAccessException(Piwik::translate('General_ExceptionInvalidToken'));
         }
     }
@@ -990,5 +991,13 @@ abstract class Controller
         $result .= '>' . $evolutionPercent . '</strong></span>';
 
         return $result;
+    }
+
+    protected function checkSitePermission()
+    {
+        if (empty($this->site) || empty($this->idSite)) {
+            throw new Exception("The requested website idSite is not found in the request, or is invalid.
+				Please check that you are logged in Piwik and have permission to access the specified website.");
+        }
     }
 }

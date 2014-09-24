@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,7 +8,7 @@
  */
 namespace Piwik\Plugins\Installation;
 
-use Piwik\CliMulti\Process;
+use Piwik\CliMulti;
 use Piwik\Common;
 use Piwik\Config;
 use Piwik\Db;
@@ -59,7 +59,7 @@ class SystemCheck
 
         $infos['phpVersion_minimum'] = $piwik_minimumPHPVersion;
         $infos['phpVersion'] = PHP_VERSION;
-        $infos['phpVersion_ok'] = version_compare($piwik_minimumPHPVersion, $infos['phpVersion']) === -1;
+        $infos['phpVersion_ok'] = self::isPhpVersionValid($infos['phpVersion']);
 
         // critical errors
         $extensions = @get_loaded_extensions();
@@ -130,8 +130,8 @@ class SystemCheck
             'mail',
             'parse_ini_file',
             'glob',
+            'gzopen',
         );
-        $infos['desired_functions'] = $desired_functions;
         $infos['missing_desired_functions'] = array();
         foreach ($desired_functions as $desired_function) {
             if (!self::functionExists($desired_function)) {
@@ -139,10 +139,19 @@ class SystemCheck
             }
         }
 
+        $sessionAutoStarted = (int)ini_get('session.auto_start');
+        if($sessionAutoStarted) {
+            $infos['missing_desired_functions'][] = 'session.auto_start';
+        }
+
+        $desired_settings = array(
+            'session.auto_start',
+        );
+        $infos['desired_functions'] = array_merge($desired_functions, $desired_settings);
+
         $infos['openurl'] = Http::getTransportMethod();
 
         $infos['gd_ok'] = SettingsServer::isGdExtensionEnabled();
-
 
         $serverSoftware = isset($_SERVER['SERVER_SOFTWARE']) ? $_SERVER['SERVER_SOFTWARE'] : '';
         $infos['serverVersion'] = addslashes($serverSoftware);
@@ -174,7 +183,9 @@ class SystemCheck
         }
 
         $infos['timezone'] = SettingsServer::isTimezoneSupportEnabled();
-        $infos['cli_process_ok'] = Process::isSupported();
+
+        $process = new CliMulti();
+        $infos['cli_process_ok'] = $process->supportsAsync();
 
         $infos['tracker_status'] = Common::getRequestVar('trackerStatus', 0, 'int');
 
@@ -265,7 +276,6 @@ class SystemCheck
         return $result;
     }
 
-
     private static function checkGeolocation(&$result)
     {
         $currentProviderId = LocationProvider::getCurrentProviderId();
@@ -306,15 +316,23 @@ class SystemCheck
         Db::exec("DELETE FROM `$optionTable` WHERE option_name IN ('" . implode("','", $testOptionNames) . "')");
     }
 
-
     protected static function initServerFilesForSecurity()
     {
-        if (SettingsServer::isIIS()) {
-            ServerFilesGenerator::createWebConfigFiles();
-        } else {
-            ServerFilesGenerator::createHtAccessFiles();
-        }
+        ServerFilesGenerator::createWebConfigFiles();
+        ServerFilesGenerator::createHtAccessFiles();
+
         ServerFilesGenerator::createWebRootFiles();
+    }
+
+    /**
+     * @param $piwik_minimumPHPVersion
+     * @param $infos
+     * @return bool
+     */
+    public static function isPhpVersionValid($phpVersion)
+    {
+        global $piwik_minimumPHPVersion;
+        return version_compare($piwik_minimumPHPVersion, $phpVersion) === -1;
     }
 
 }

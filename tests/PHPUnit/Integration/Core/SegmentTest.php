@@ -1,14 +1,15 @@
 <?php
-use Piwik\Access;
-use Piwik\Common;
-use Piwik\Segment;
-
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
+use Piwik\Access;
+use Piwik\Common;
+use Piwik\Segment;
+use Piwik\Tests\Fixture;
+
 class SegmentTest extends DatabaseTestCase
 {
     public function setUp()
@@ -32,7 +33,7 @@ class SegmentTest extends DatabaseTestCase
     protected function _filterWhitsSpaces($valueToFilter)
     {
         if (is_array($valueToFilter)) {
-            foreach ($valueToFilter AS $key => $value) {
+            foreach ($valueToFilter as $key => $value) {
                 $valueToFilter[$key] = $this->_filterWhitsSpaces($value);
             }
             return $valueToFilter;
@@ -40,7 +41,6 @@ class SegmentTest extends DatabaseTestCase
             return preg_replace('/[\s]+/', ' ', $valueToFilter);
         }
     }
-
 
     public function getCommonTestData()
     {
@@ -466,7 +466,7 @@ class SegmentTest extends DatabaseTestCase
 
     /**
      * @group Core
-     * 
+     *
      * @dataProvider getBogusSegments
      */
     public function testBogusSegmentThrowsException($segment)

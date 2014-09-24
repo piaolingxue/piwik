@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -68,7 +68,6 @@ class Core_Plugin_ViewDataTable_ManagerTest extends DatabaseTestCase
         $this->assertEmpty(ViewDataTableManager::getViewDataTableParameters('mylogin1', 'API.get4'));
         $this->assertEmpty(ViewDataTableManager::getViewDataTableParameters('mylogin3', 'API.get5'));
     }
-
 
     public function test_clearUserViewDataTableParameters_shouldOnlyRemoveAUsersParameters()
     {

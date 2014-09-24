@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link    http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -34,7 +34,7 @@ class Test_LanguagesManager extends PHPUnit_Framework_TestCase
 
         $pluginsWithTranslation = array();
 
-        foreach ($plugins AS $plugin) {
+        foreach ($plugins as $plugin) {
 
             if (API::getInstance()->getPluginTranslationsForLanguage($plugin, 'en')) {
 
@@ -43,11 +43,11 @@ class Test_LanguagesManager extends PHPUnit_Framework_TestCase
         }
 
         $return = array();
-        foreach ($languages AS $language) {
+        foreach ($languages as $language) {
             if ($language != 'en') {
                 $return[] = array($language, null);
 
-                foreach ($pluginsWithTranslation AS $plugin) {
+                foreach ($pluginsWithTranslation as $plugin) {
 
                     $return[] = array($language, $plugin);
                 }
@@ -110,7 +110,7 @@ class Test_LanguagesManager extends PHPUnit_Framework_TestCase
      */
     function testWriterInvalidPlugin()
     {
-        $writer = new Writer('de', 'iNvaLiDPluGin'); // invalid plugin throws exception
+        new Writer('de', 'iNvaLiDPluGin'); // invalid plugin throws exception
     }
 
     /**

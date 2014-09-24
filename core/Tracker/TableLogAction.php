@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -12,7 +12,6 @@ namespace Piwik\Tracker;
 use Piwik\Common;
 use Piwik\SegmentExpression;
 use Piwik\Tracker;
-
 
 /**
  * This class is used to query Action IDs from the log_action table.
@@ -176,7 +175,6 @@ class TableLogAction
         return array($fieldNameToActionId, $fieldNamesToInsert);
     }
 
-
     /**
      * Convert segment expression to an action ID or an SQL expression.
      *
@@ -234,6 +232,10 @@ class TableLogAction
             'eventAction' => Action::TYPE_EVENT_ACTION,
             'eventCategory' => Action::TYPE_EVENT_CATEGORY,
             'eventName' => Action::TYPE_EVENT_NAME,
+            'contentPiece' => Action::TYPE_CONTENT_PIECE,
+            'contentTarget' => Action::TYPE_CONTENT_TARGET,
+            'contentName' => Action::TYPE_CONTENT_NAME,
+            'contentInteraction' => Action::TYPE_CONTENT_INTERACTION,
         );
         if(!empty($exactMatch[$segmentName])) {
             return $exactMatch[$segmentName];

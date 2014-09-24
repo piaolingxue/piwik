@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,7 @@
  */
 namespace Piwik\Plugins\SegmentEditor;
 
+use Piwik\Config;
 use Piwik\Db;
 use Piwik\DbHelper;
 use Piwik\Version;
@@ -46,8 +47,8 @@ class SegmentEditor extends \Piwik\Plugin
 
     function getSegmentEditorHtml(&$out)
     {
-        $controller = new Controller();
-        $out .= $controller->getSelector();
+        $selector = new SegmentSelectorControl();
+        $out .= $selector->render();
     }
 
     public function getKnownSegmentsToArchiveAllSites(&$segments)
@@ -97,5 +98,15 @@ class SegmentEditor extends \Piwik\Plugin
     public function getStylesheetFiles(&$stylesheets)
     {
         $stylesheets[] = "plugins/SegmentEditor/stylesheets/segmentation.less";
+    }
+
+    /**
+     * Returns whether adding segments for all websites is enabled or not.
+     *
+     * @return bool
+     */
+    public static function isAddingSegmentsForAllWebsitesEnabled()
+    {
+        return Config::getInstance()->General['allow_adding_segments_for_all_websites'] == 1;
     }
 }

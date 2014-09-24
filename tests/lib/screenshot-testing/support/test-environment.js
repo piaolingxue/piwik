@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * Test environment overriding
  *
@@ -118,6 +118,13 @@ TestingEnvironment.prototype.executeConsoleCommand = function (command, args, ca
     child.on("exit", callback);
 };
 
+TestingEnvironment.prototype.addPluginOnCmdLineToTestEnv = function () {
+    if (options.plugin) {
+        this.pluginsToLoad = [options.plugin];
+        this.save();
+    }
+};
+
 var droppedOnce = false;
 TestingEnvironment.prototype.setupFixture = function (fixtureClass, done) {
     console.log("    Setting up fixture " + fixtureClass + "...");
@@ -137,9 +144,14 @@ TestingEnvironment.prototype.setupFixture = function (fixtureClass, done) {
         droppedOnce = true;
     }
 
+    if (options['plugin']) {
+        args.push('--plugins=' + options['plugin']);
+    }
+
     var self = this;
     this.executeConsoleCommand('tests:setup-fixture', args, function (code) {
         self.reload();
+        self.addPluginOnCmdLineToTestEnv();
 
         console.log();
 

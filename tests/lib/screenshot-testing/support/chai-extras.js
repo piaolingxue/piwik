@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * chai assertion extensions
  *
@@ -41,17 +41,8 @@ function getPageLogsString(pageLogs, indent) {
 
 // add capture assertion
 var pageRenderer = new PageRenderer(path.join(config.piwikUrl, "tests", "PHPUnit", "proxy"));
-chai.Assertion.addChainableMethod('capture', function () {
-    var compareAgainst = this.__flags['object'];
-    if (arguments.length == 2) {
-        var screenName = compareAgainst,
-            pageSetupFn = arguments[0],
-            done = arguments[1];
-    } else {
-        var screenName = app.runner.suite.title + "_" + arguments[0],
-            pageSetupFn = arguments[1],
-            done = arguments[2];
-    }
+
+function capture(screenName, compareAgainst, selector, pageSetupFn, done) {
 
     if (!(done instanceof Function)) {
         throw new Error("No 'done' callback specified in capture assertion.");
@@ -106,7 +97,6 @@ chai.Assertion.addChainableMethod('capture', function () {
                 failureInfo += indent + "Url to reproduce: " + pageRenderer.getCurrentUrl() + "\n";
                 failureInfo += indent + "Generated screenshot: " + processedPath + "\n";
                 failureInfo += indent + "Expected screenshot: " + expectedPath + "\n";
-                failureInfo += indent + "Screenshot diff: " + app.diffViewerGenerator.getDiffPath(testInfo);
 
                 failureInfo += getPageLogsString(pageRenderer.pageLogs, indent);
 
@@ -116,6 +106,14 @@ chai.Assertion.addChainableMethod('capture', function () {
                 error.stack = failureInfo;
 
                 done(error);
+            };
+
+            var pass = function () {
+                if (options['print-logs']) {
+                    console.log(getPageLogsString(pageRenderer.pageLogs, "     "));
+                }
+
+                done();
             };
 
             if (!testInfo.processed) {
@@ -131,27 +129,66 @@ chai.Assertion.addChainableMethod('capture', function () {
             var expected = fs.read(expectedScreenshotPath),
                 processed = fs.read(processedScreenshotPath);
 
-            if (expected != processed) {
-                fail("Processed screenshot does not match expected for " + screenshotFileName + ".");
+            if (processed == expected) {
+                pass();
                 return;
             }
 
-            if (options['print-logs']) {
-                console.log(getPageLogsString(pageRenderer.pageLogs, "     "));
-            }
+            // if the files are not exact, perform a diff to check if they are truly different
+            resemble("file://" + processedScreenshotPath).compareTo("file://" + expectedScreenshotPath).onComplete(function(data) {
+                if (data.misMatchPercentage != 0) {
+                    fail("Processed screenshot does not match expected for " + screenshotFileName + ".");
+                    return;
+                }
 
-            done();
-        });
+                pass();
+            });
+        }, selector);
     } catch (ex) {
         var err = new Error(ex.message);
         err.stack = ex.message;
         done(err);
     }
+}
+
+chai.Assertion.addChainableMethod('captureSelector', function () {
+    var compareAgainst = this.__flags['object'];
+
+    if (arguments.length == 3) {
+        var screenName  = compareAgainst,
+            selector    = arguments[0],
+            pageSetupFn = arguments[1],
+            done        = arguments[2];
+    } else {
+        var screenName  = app.runner.suite.title + "_" + arguments[0],
+            selector    = arguments[1],
+            pageSetupFn = arguments[2],
+            done        = arguments[3];
+    }
+
+    capture(screenName, compareAgainst, selector, pageSetupFn, done);
+});
+
+chai.Assertion.addChainableMethod('capture', function () {
+    var compareAgainst = this.__flags['object'];
+
+    if (arguments.length == 2) {
+        var screenName  = compareAgainst,
+            pageSetupFn = arguments[0],
+            done        = arguments[1];
+    } else {
+        var screenName  = app.runner.suite.title + "_" + arguments[0],
+            pageSetupFn = arguments[1],
+            done        = arguments[2];
+    }
+
+    capture(screenName, compareAgainst, null, pageSetupFn, done);
 });
 
 // add `contains` assertion
 chai.Assertion.addChainableMethod('contains', function () {
-    var url = this.__flags['object'],
+    var self = this,
+        url = this.__flags['object'],
         elementSelector = arguments[0],
         pageSetupFn = arguments[1],
         done = arguments[2];
@@ -169,21 +206,27 @@ chai.Assertion.addChainableMethod('contains', function () {
     }
 
     pageRenderer.capture(null, function (err) {
+        var obj = self._obj,
+            indent = "     ";
+
         if (err) {
-            var indent = "     ";
             err.stack = err.message + "\n" + indent + getPageLogsString(pageRenderer.pageLogs, indent);
 
             done(err);
             return;
         }
 
-        if (!pageRenderer.contains(elementSelector)) {
-            var error = new AssertionError("Page does not contain element '" + elementSelector + "'.");
-            error.stack = getPageLogsString(pageRenderer.pageLogs, indent);
+        try {
+            self.assert(
+                pageRenderer.contains(elementSelector),
+                "Expected page to contain element '" + elementSelector + "', but could not find it in page.",
+                "Expected page to not contain element '" + elementSelector + "', but found it in page."
+            );
 
-            done(error);
-        } else {
             done();
+        } catch (error) {
+            error.stack = getPageLogsString(pageRenderer.pageLogs, indent);
+            done(error);
         }
     });
 });

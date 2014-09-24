@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,6 +8,7 @@
  */
 namespace Piwik\Plugins\Insights;
 
+use Piwik\API\Request;
 use Piwik\Common;
 use Piwik\Piwik;
 use Piwik\Plugins\Insights\Visualizations\Insight;
@@ -67,11 +68,12 @@ class Controller extends \Piwik\Plugin\Controller
             return;
         }
 
-        $idSite = Common::getRequestVar('idSite', null, 'int');
-        $period = Common::getRequestVar('period', null, 'string');
-        $date   = Common::getRequestVar('date', null, 'string');
+        $idSite  = Common::getRequestVar('idSite', null, 'int');
+        $period  = Common::getRequestVar('period', null, 'string');
+        $date    = Common::getRequestVar('date', null, 'string');
+        $segment = Request::getRawSegmentFromRequest();
 
-        return API::getInstance()->$apiReport($idSite, $period, $date);
+        return API::getInstance()->$apiReport($idSite, $period, $date, $segment);
     }
 
     private function canGenerateInsights()

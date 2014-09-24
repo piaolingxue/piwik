@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -22,6 +22,7 @@ use Piwik\SettingsPiwik;
 use Piwik\SettingsServer;
 use Piwik\Site;
 use Piwik\TaskScheduler;
+use Piwik\Tracker;
 use Piwik\Tracker\Cache;
 use Piwik\Url;
 use Piwik\UrlHelper;
@@ -69,13 +70,13 @@ class API extends \Piwik\Plugin\API
      * @param bool $customCampaignNameQueryParam
      * @param bool $customCampaignKeywordParam
      * @param bool $doNotTrack
-     * @internal param $
+     * @param bool $disableCookies
      * @return string The Javascript tag ready to be included on the HTML pages
      */
     public function getJavascriptTag($idSite, $piwikUrl = '', $mergeSubdomains = false, $groupPageTitlesByDomain = false,
                                      $mergeAliasUrls = false, $visitorCustomVariables = false, $pageCustomVariables = false,
                                      $customCampaignNameQueryParam = false, $customCampaignKeywordParam = false,
-                                     $doNotTrack = false)
+                                     $doNotTrack = false, $disableCookies = false)
     {
         Piwik::checkUserHasViewAccess($idSite);
 
@@ -87,7 +88,7 @@ class API extends \Piwik\Plugin\API
         $htmlEncoded = Piwik::getJavascriptCode($idSite, $piwikUrl, $mergeSubdomains, $groupPageTitlesByDomain,
                                                 $mergeAliasUrls, $visitorCustomVariables, $pageCustomVariables,
                                                 $customCampaignNameQueryParam, $customCampaignKeywordParam,
-                                                $doNotTrack);
+                                                $doNotTrack, $disableCookies);
         $htmlEncoded = str_replace(array('<br>', '<br />', '<br/>'), '', $htmlEncoded);
         return $htmlEncoded;
     }
@@ -180,32 +181,16 @@ class API extends \Piwik\Plugin\API
     public function getSiteFromId($idSite)
     {
         Piwik::checkUserHasViewAccess($idSite);
-        $site = Db::get()->fetchRow("SELECT *
-    								FROM " . Common::prefixTable("site") . "
-    								WHERE idsite = ?", $idSite);
+
+        $site = $this->getModel()->getSiteFromId($idSite);
 
         Site::setSitesFromArray(array($site));
         return $site;
     }
 
-    /**
-     * Returns the list of alias URLs registered for the given idSite.
-     * The website ID must be valid when calling this method!
-     *
-     * @param int $idSite
-     * @return array list of alias URLs
-     */
-    private function getAliasSiteUrlsFromId($idSite)
+    private function getModel()
     {
-        $db = Db::get();
-        $result = $db->fetchAll("SELECT url
-								FROM " . Common::prefixTable("site_url") . "
-								WHERE idsite = ?", $idSite);
-        $urls = array();
-        foreach ($result as $url) {
-            $urls[] = $url['url'];
-        }
-        return $urls;
+        return new Model();
     }
 
     /**
@@ -218,25 +203,12 @@ class API extends \Piwik\Plugin\API
     public function getSiteUrlsFromId($idSite)
     {
         Piwik::checkUserHasViewAccess($idSite);
-        $site = new Site($idSite);
-        $urls = $this->getAliasSiteUrlsFromId($idSite);
-        return array_merge(array($site->getMainUrl()), $urls);
+        return $this->getModel()->getSiteUrlsFromId($idSite);
     }
 
-    /**
-     * Returns the list of all the website IDs registered.
-     * Caller must check access.
-     *
-     * @return array The list of website IDs
-     */
     private function getSitesId()
     {
-        $result = Db::fetchAll("SELECT idsite FROM " . Common::prefixTable('site'));
-        $idSites = array();
-        foreach ($result as $idSite) {
-            $idSites[] = $idSite['idsite'];
-        }
-        return $idSites;
+        return $this->getModel()->getSitesId();
     }
 
     /**
@@ -311,12 +283,19 @@ class API extends \Piwik\Plugin\API
      * Returns the list of websites with the 'admin' access for the current user.
      * For the superUser it returns all the websites in the database.
      *
+     * @param bool $fetchAliasUrls
      * @return array for each site, an array of information (idsite, name, main_url, etc.)
      */
-    public function getSitesWithAdminAccess()
+    public function getSitesWithAdminAccess($fetchAliasUrls = false)
     {
         $sitesId = $this->getSitesIdWithAdminAccess();
-        return $this->getSitesFromIds($sitesId);
+        $sites = $this->getSitesFromIds($sitesId);
+
+        if ($fetchAliasUrls)
+            foreach ($sites as &$site)
+                $site['alias_urls'] = API::getInstance()->getSiteUrlsFromId($site['idsite']);
+
+        return $sites;
     }
 
     /**
@@ -414,21 +393,10 @@ class API extends \Piwik\Plugin\API
      */
     private function getSitesFromIds($idSites, $limit = false)
     {
-        if (count($idSites) === 0) {
-            return array();
-        }
-
-        if ($limit) {
-            $limit = "LIMIT " . (int)$limit;
-        }
-
-        $db = Db::get();
-        $sites = $db->fetchAll("SELECT *
-								FROM " . Common::prefixTable("site") . "
-								WHERE idsite IN (" . implode(", ", $idSites) . ")
-								ORDER BY idsite ASC $limit");
+        $sites = $this->getModel()->getSitesFromIds($idSites, $limit);
 
         Site::setSitesFromArray($sites);
+
         return $sites;
     }
 
@@ -627,6 +595,7 @@ class API extends \Piwik\Plugin\API
     {
         Site::clearCache();
         Cache::regenerateCacheWebsiteAttributes($idSite);
+        SiteUrls::clearSitesCache();
     }
 
     /**
@@ -666,11 +635,11 @@ class API extends \Piwik\Plugin\API
 
         /**
          * Triggered after a site has been deleted.
-         * 
+         *
          * Plugins can use this event to remove site specific values or settings, such as removing all
          * goals that belong to a specific website. If you store any data related to a website you
          * should clean up that information here.
-         * 
+         *
          * @param int $idSite The ID of the site being deleted.
          */
         Piwik::postEvent('SitesManager.deleteSite.end', array($idSite));
@@ -1168,7 +1137,6 @@ class API extends \Piwik\Plugin\API
             "idsite = $idSite"
         );
 
-
         // we now update the main + alias URLs
         $this->deleteSiteAliasUrls($idSite);
         if (count($urls) > 1) {
@@ -1185,7 +1153,7 @@ class API extends \Piwik\Plugin\API
      *
      * @ignore
      */
-    public function updateSiteCreatedTime($idSites, $minDate)
+    public function updateSiteCreatedTime($idSites, Date $minDate)
     {
         $idSites = Site::getIdSitesFromIdSitesString($idSites);
         Piwik::checkUserHasAdminAccess($idSites);
@@ -1238,6 +1206,17 @@ class API extends \Piwik\Plugin\API
         return array_map(function ($a) {
             return $a[0];
         }, $currencies);
+    }
+
+    /**
+     * Return true if Timezone support is enabled on server
+     *
+     * @return bool
+     */
+    public function isTimezoneSupportEnabled()
+    {
+        Piwik::checkUserHasSomeViewAccess();
+        return SettingsServer::isTimezoneSupportEnabled();
     }
 
     /**

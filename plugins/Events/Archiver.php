@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -182,7 +182,6 @@ class Archiver extends \Piwik\Plugin\Archiver
         $this->archiveDayQueryProcess($select, $from, $where, $orderBy, $groupBy, $rankingQuery);
     }
 
-
     protected function archiveDayQueryProcess($select, $from, $where, $orderBy, $groupBy, RankingQuery $rankingQuery)
     {
         // get query with segmentation
@@ -204,7 +203,6 @@ class Archiver extends \Piwik\Plugin\Archiver
             $this->aggregateEventRow($row);
         }
     }
-
 
     /**
      * Records the daily datatables

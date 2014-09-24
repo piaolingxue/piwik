@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -87,7 +87,7 @@ class FakeAccess
         if (self::$superUser) {
             return;
         }
-        
+
         $websitesAccess = array_merge(self::$idSitesView, self::$idSitesAdmin);
 
         if (!is_array($idSites)) {
@@ -160,7 +160,7 @@ class FakeAccess
         }
         return array_merge(self::$idSitesView, self::$idSitesAdmin);
     }
-    
+
     public function getRawSitesWithSomeViewAccess($login)
     {
         $result = array();
@@ -169,5 +169,4 @@ class FakeAccess
         }
         return $result;
     }
-
 }

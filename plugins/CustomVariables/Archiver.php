@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -213,6 +213,7 @@ class Archiver extends \Piwik\Plugin\Archiver
             ) {
                 unset($row[Metrics::INDEX_NB_UNIQ_VISITORS]);
                 unset($row[Metrics::INDEX_NB_VISITS]);
+                unset($row[Metrics::INDEX_NB_USERS]);
             }
         }
     }

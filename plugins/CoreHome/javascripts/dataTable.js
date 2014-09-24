@@ -1,5 +1,5 @@
 /*!
- * Piwik - Web Analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -155,7 +155,9 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             'columns',
             'flat',
             'include_aggregate_rows',
-            'totalRows'
+            'totalRows',
+            'pivotBy',
+            'pivotByColumn'
         ];
 
         for (var key = 0; key < filters.length; key++) {
@@ -207,6 +209,8 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             $('#' + self.workingDivId + ' .loadingPiwik').last().css('display', 'block');
         }
 
+        $('#loadingError').hide();
+
         // when switching to display graphs, reset limit
         if (self.param.viewDataTable && self.param.viewDataTable.indexOf('graph') === 0) {
             delete self.param.filter_offset;
@@ -214,7 +218,6 @@ $.extend(DataTable.prototype, UIControl.prototype, {
         }
 
         var container = $('#' + self.workingDivId + ' .piwik-graph');
-
 
         var params = {};
         for (var key in self.param) {
@@ -233,6 +236,14 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                 callbackSuccess(response);
             }
         );
+        ajaxRequest.setErrorCallback(function (deferred, status) {
+            if (status == 'abort' || !deferred || deferred.status < 400 || deferred.status >= 600) {
+                return;
+            }
+
+            $('#' + self.workingDivId + ' .loadingPiwik').last().css('display', 'none');
+            $('#loadingError').show();
+        });
         ajaxRequest.setFormat('html');
 
         ajaxRequest.send(false);
@@ -565,7 +576,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
             // we change the style of the column currently used as sort column
             // adding an image and the class columnSorted to the TD
-            $("th#" + self.param.filter_sort_column + ' #thDIV', domElem).parent()
+            $('th', domElem).filter(function () { return $(this).attr('id') == self.param.filter_sort_column; })
                 .addClass('columnSorted')
                 .prepend('<div class="sortIconContainer sortIconContainer' + ImageSortClass + ' ' + imageSortClassType + '"><span class="sortIcon" width="' + imageSortWidth + '" height="' + imageSortHeight + '" /></div>');
         }
@@ -589,6 +600,14 @@ $.extend(DataTable.prototype, UIControl.prototype, {
         }
         currentPattern = piwikHelper.htmlDecode(currentPattern);
 
+        var patternsToReplace = [{from: '?', to: '\\?'}, {from: '+', to: '\\+'}, {from: '*', to: '\\*'}]
+
+        $.each(patternsToReplace, function (index, pattern) {
+            if (0 === currentPattern.indexOf(pattern.to)) {
+                currentPattern = pattern.from + currentPattern.substr(2);
+            }
+        });
+
         $('.dataTableSearchPattern', domElem)
             .css({display: 'block'})
             .each(function () {
@@ -608,6 +627,12 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                     function () {
                         var keyword = $(this).siblings('.searchInput').val();
                         self.param.filter_offset = 0;
+
+                        $.each(patternsToReplace, function (index, pattern) {
+                            if (0 === keyword.indexOf(pattern.from)) {
+                                keyword = pattern.to + keyword.substr(1);
+                            }
+                        });
 
                         if (self.param.search_recursive) {
                             self.param.filter_column_recursive = 'label';
@@ -674,46 +699,47 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             }
         );
 
+        var $next = $('.dataTableNext', domElem);
+
         // Display the next link if the total Rows is greater than the current end row
-        $('.dataTableNext', domElem)
-            .each(function () {
-                var offsetEnd = Number(self.param.filter_offset)
-                    + Number(self.param.filter_limit);
-                var totalRows = Number(self.param.totalRows);
-                if (self.param.keep_summary_row == 1) --totalRows;
-                if (offsetEnd < totalRows) {
-                    $(this).css('display', 'inline');
-                }
-            })
-            // bind the click event to trigger the ajax request with the new offset
-            .click(function () {
-                $(this).off('click');
-                self.param.filter_offset = Number(self.param.filter_offset) + Number(self.param.filter_limit);
-                self.reloadAjaxDataTable();
-            })
-        ;
+        $next.each(function () {
+            var offsetEnd = Number(self.param.filter_offset)
+                + Number(self.param.filter_limit);
+            var totalRows = Number(self.param.totalRows);
+            if (self.param.keep_summary_row == 1) --totalRows;
+            if (offsetEnd < totalRows) {
+                $(this).css('display', 'inline');
+            }
+        });
+        // bind the click event to trigger the ajax request with the new offset
+        $next.off('click');
+        $next.click(function () {
+            $(this).off('click');
+            self.param.filter_offset = Number(self.param.filter_offset) + Number(self.param.filter_limit);
+            self.reloadAjaxDataTable();
+        });
+
+        var $prev = $('.dataTablePrevious', domElem);
 
         // Display the previous link if the current offset is not zero
-        $('.dataTablePrevious', domElem)
-            .each(function () {
-                var offset = 1 + Number(self.param.filter_offset);
-                if (offset != 1) {
-                    $(this).css('display', 'inline');
-                }
+        $prev.each(function () {
+            var offset = 1 + Number(self.param.filter_offset);
+            if (offset != 1) {
+                $(this).css('display', 'inline');
             }
-        )
-            // bind the click event to trigger the ajax request with the new offset
-            // take care of the negative offset, we setup 0
-            .click(
-            function () {
-                $(this).off('click');
-                var offset = Number(self.param.filter_offset) - Number(self.param.filter_limit);
-                if (offset < 0) { offset = 0; }
-                self.param.filter_offset = offset;
-                self.param.previous = 1;
-                self.reloadAjaxDataTable();
-            }
-        );
+        });
+
+        // bind the click event to trigger the ajax request with the new offset
+        // take care of the negative offset, we setup 0
+        $prev.off('click');
+        $prev.click(function () {
+            $(this).off('click');
+            var offset = Number(self.param.filter_offset) - Number(self.param.filter_limit);
+            if (offset < 0) { offset = 0; }
+            self.param.filter_offset = offset;
+            self.param.previous = 1;
+            self.reloadAjaxDataTable();
+        });
     },
 
     handleEvolutionAnnotations: function (domElem) {
@@ -999,7 +1025,6 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             }
         });
 
-
         $('.exportToFormatItems a', domElem)
             // prevent click jacking attacks by dynamically adding the token auth when the link is clicked
             .click(function () {
@@ -1052,7 +1077,6 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                     + ( typeof self.param.filter_pattern != "undefined" ? '&filter_pattern=' + self.param.filter_pattern : '')
                     + ( typeof self.param.filter_pattern_recursive != "undefined" ? '&filter_pattern_recursive=' + self.param.filter_pattern_recursive : '');
 
-
                 if (typeof self.param.flat != "undefined") {
                     str += '&flat=' + (self.param.flat == 0 ? '0' : '1');
                     if (typeof self.param.include_aggregate_rows != "undefined" && self.param.include_aggregate_rows) {
@@ -1066,6 +1090,12 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
                 } else {
                     str += '&expanded=1';
+                }
+                if (self.param.pivotBy) {
+                    str += '&pivotBy=' + self.param.pivotBy + '&pivotByColumnLimit=20';
+                    if (self.props.pivot_by_column) {
+                        str += '&pivotByColumn=' + self.props.pivot_by_column;
+                    }
                 }
                 if (format == 'CSV' || format == 'TSV' || format == 'RSS') {
                     str += '&translateColumnNames=1&language=' + piwik.language;
@@ -1149,15 +1179,19 @@ $.extend(DataTable.prototype, UIControl.prototype, {
         };
         $('div.tableConfiguration', domElem).hover(open, close);
 
-        var generateClickCallback = function (paramName, callbackAfterToggle) {
+        var generateClickCallback = function (paramName, callbackAfterToggle, setParamCallback) {
             return function () {
                 close();
-                self.param[paramName] = (1 - self.param[paramName]) + '';
+                if (setParamCallback) {
+                    var data = setParamCallback();
+                } else {
+                    self.param[paramName] = (1 - self.param[paramName]) + '';
+                    var data = {};
+                }
                 self.param.filter_offset = 0;
                 delete self.param.totalRows;
                 if (callbackAfterToggle) callbackAfterToggle();
                 self.reloadAjaxDataTable(true, callbackSuccess);
-                var data = {};
                 data[paramName] = self.param[paramName];
                 self.notifyWidgetParametersChange(domElem, data);
             };
@@ -1223,6 +1257,37 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                     self.param.filter_sort_column = '';
                     self.notifyWidgetParametersChange(domElem, {filter_sort_column: ''});
                 }
+            }));
+
+        // handle pivot by
+        $('.dataTablePivotBySubtable', domElem)
+            .each(function () {
+                if (self.param.pivotBy
+                    && self.param.pivotBy != '0'
+                ) {
+                    $(this).html(getText('CoreHome_UndoPivotBySubtable', true));
+                    iconHighlighted = true;
+                } else {
+                    var optionLabelText = getText('CoreHome_PivotBySubtable').replace('%s', self.props.pivot_dimension_name);
+                    $(this).html(optionLabelText);
+                }
+            })
+            .click(generateClickCallback('pivotBy', null, function () {
+                if (self.param.pivotBy
+                    && self.param.pivotBy != '0'
+                ) {
+                    self.param.pivotBy = '0'; // set to '0' so it will be sent in the request and override the saved param
+                    self.param.pivotByColumn = '0';
+                } else {
+                    self.param.pivotBy = self.props.pivot_by_dimension;
+                    if (self.props.pivot_by_column) {
+                        self.param.pivotByColumn = self.props.pivot_by_column;
+                    }
+                }
+
+                // remove sorting so it will default to first column in table
+                self.param.filter_sort_column = '';
+                return {filter_sort_column: ''};
             }));
 
         // handle highlighted icon
@@ -1373,7 +1438,9 @@ $.extend(DataTable.prototype, UIControl.prototype, {
             toggleFooter({doNotNotifyChange: true});
         }
 
-        $('.foldDataTableFooterDrawer, .expandDataTableFooterDrawer', domElem).on('click', toggleFooter);
+        var $nodes = $('.foldDataTableFooterDrawer, .expandDataTableFooterDrawer', domElem);
+        $nodes.off('click');
+        $nodes.on('click', toggleFooter);
     },
 
     handleColumnHighlighting: function (domElem) {
@@ -1391,13 +1458,13 @@ $.extend(DataTable.prototype, UIControl.prototype, {
 
                 if (!maxWidth[nthChild]) {
                     maxWidth[nthChild] = 0;
-                    rows.find("td:nth-child(" + (nthChild) + ") .column .value").each(function (index, element) {
+                    rows.find("td:nth-child(" + (nthChild) + ").column .value").each(function (index, element) {
                         var width    = $(element).width();
                         if (width > maxWidth[nthChild]) {
                             maxWidth[nthChild] = width;
                         }
                     });
-                    rows.find("td:nth-child(" + (nthChild) + ") .column .value").each(function (index, element) {
+                    rows.find("td:nth-child(" + (nthChild) + ").column .value").each(function (index, element) {
                         $(element).css({width: maxWidth[nthChild], display: 'inline-block'});
                     });
                 }
@@ -1452,7 +1519,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                         '<tr>' +
                             '<td colspan="' + numberOfColumns + '" class="cellSubDataTable">' +
                             '<div id="' + divIdToReplaceWithSubTable + '">' +
-                            '<span class="loadingPiwik" style="display:inline"><img src="plugins/Zeitgeist/images/loading-blue.gif" />' + _pk_translate('General_Loading') + '</span>' +
+                            '<span class="loadingPiwik" style="display:inline"><img src="plugins/Morpheus/images/loading-blue.gif" />' + _pk_translate('General_Loading') + '</span>' +
                             '</div>' +
                             '</td>' +
                             '</tr>'
@@ -1488,6 +1555,7 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                 }
 
                 $(this).next().toggle();
+                $(this).toggleClass('expanded');
                 self.repositionRowActions($(this));
             }
         ).size();
@@ -1592,6 +1660,9 @@ $.extend(DataTable.prototype, UIControl.prototype, {
                 for (var key in newParams) {
                     self.param[key] = decodeURIComponent(newParams[key]);
                 }
+
+                delete self.param.pivotBy;
+                delete self.param.pivotByColumn;
 
                 // do ajax request
                 self.reloadAjaxDataTable(true, function (newReport) {

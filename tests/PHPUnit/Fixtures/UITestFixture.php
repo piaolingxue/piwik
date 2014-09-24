@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -8,8 +8,8 @@
 namespace Piwik\Tests\Fixtures;
 
 use Exception;
-use Piwik\Access;
 use Piwik\AssetManager;
+use Piwik\Access;
 use Piwik\Common;
 use Piwik\Date;
 use Piwik\Db;
@@ -18,17 +18,28 @@ use Piwik\FrontController;
 use Piwik\Option;
 use Piwik\Plugins\SegmentEditor\API as APISegmentEditor;
 use Piwik\Plugins\UsersManager\API as UsersManagerAPI;
-use Piwik\Plugins\VisitsSummary\API as VisitsSummaryAPI;
+use Piwik\Plugins\SitesManager\API as SitesManagerAPI;
 use Piwik\WidgetsList;
+use Piwik\Tests\OverrideLogin;
 
 /**
  * Fixture for UI tests.
  */
-class UITestFixture extends OmniFixture
+class UITestFixture extends SqlDump
 {
+    const FIXTURE_LOCATION = '/tests/resources/OmniFixture-dump.sql.gz';
+
+    public function __construct()
+    {
+        $this->dumpUrl = PIWIK_INCLUDE_PATH . self::FIXTURE_LOCATION;
+        $this->tablesPrefix = '';
+    }
+
     public function setUp()
     {
         parent::setUp();
+
+        self::updateDatabase();
 
         // make sure site has an early enough creation date (for period selector tests)
         Db::get()->update(Common::prefixTable("site"),
@@ -41,13 +52,7 @@ class UITestFixture extends OmniFixture
 
         DbHelper::createAnonymousUser();
         UsersManagerAPI::getInstance()->setSuperUserAccess('superUserLogin', true);
-
-        Option::set("Tests.forcedNowTimestamp", $this->now->getTimestamp());
-
-        // launch archiving so tests don't run out of time
-        $date = Date::factory($this->dateTime)->toString();
-        VisitsSummaryAPI::getInstance()->get($this->idSite, 'year', $date);
-        VisitsSummaryAPI::getInstance()->get($this->idSite, 'year', $date, urlencode($this->segment));
+        SitesManagerAPI::getInstance()->updateSite(1, null, null, true);
     }
 
     public function performSetUp($setupEnvironmentOnly = false)
@@ -56,8 +61,6 @@ class UITestFixture extends OmniFixture
 
         $this->createSegments();
         $this->setupDashboards();
-
-        AssetManager::getInstance()->removeMergedAssets();
 
         $visitorIdDeterministic = bin2hex(Db::fetchOne(
             "SELECT idvisitor FROM " . Common::prefixTable('log_visit')
@@ -69,7 +72,7 @@ class UITestFixture extends OmniFixture
 
         $forcedNowTimestamp = Option::get("Tests.forcedNowTimestamp");
         if ($forcedNowTimestamp == false) {
-            throw Exception("Incorrect fixture setup, Tests.forcedNowTimestamp option does not exist! Run the setup again.");
+            throw new Exception("Incorrect fixture setup, Tests.forcedNowTimestamp option does not exist! Run the setup again.");
         }
 
         $this->testEnvironment->forcedNowTimestamp = $forcedNowTimestamp;
@@ -171,7 +174,7 @@ class UITestFixture extends OmniFixture
     {
         $dashboardColumnCount = 3;
         $dashboardCount = 4;
-        
+
         $layout = array();
         for ($j = 0; $j != $dashboardColumnCount; ++$j) {
             $layout[] = array();
@@ -181,10 +184,10 @@ class UITestFixture extends OmniFixture
         for ($i = 0; $i != $dashboardCount; ++$i) {
             $dashboards[] = $layout;
         }
-        
+
         $oldGet = $_GET;
         $_GET['idSite'] = 1;
-        
+
         // collect widgets & sort them so widget order is not important
         $allWidgets = array();
         foreach (WidgetsList::get() as $category => $widgets) {
@@ -213,7 +216,7 @@ class UITestFixture extends OmniFixture
                 'uniqueId' => $widget['uniqueId'],
                 'parameters' => $widget['parameters']
             );
-            
+
             // dashboard images must have height of less than 4000px to avoid odd discoloration of last line of image
             $widgetEntry['parameters']['filter_limit'] = 5;
 
@@ -228,13 +231,13 @@ class UITestFixture extends OmniFixture
                 throw new Exception("Unexpected error: Incorrect dashboard widget placement logic. Something's wrong w/ the code.");
             }
         }
-        
+
         // distribute widgets in each dashboard
         $column = 0;
         foreach ($groupedWidgets as $dashboardIndex => $dashboardWidgets) {
             foreach ($dashboardWidgets as $widget) {
                 $column = ($column + 1) % $dashboardColumnCount;
-                
+
                 $dashboards[$dashboardIndex][$column][] = $widget;
             }
         }
@@ -274,7 +277,7 @@ class UITestFixture extends OmniFixture
 
         $_GET = $oldGet;
     }
-    
+
     public function createSegments()
     {
         Db::exec("TRUNCATE TABLE " . Common::prefixTable('segment'));
@@ -293,7 +296,7 @@ class UITestFixture extends OmniFixture
 
     public static function createAccessInstance()
     {
-        Access::setSingletonInstance($access = new \Test_Access_OverrideLogin());
+        Access::setSingletonInstance($access = new OverrideLogin());
         \Piwik\Piwik::postEvent('Request.initAuthenticationObject');
     }
 }

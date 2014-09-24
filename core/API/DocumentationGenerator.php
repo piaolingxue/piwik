@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -79,9 +79,8 @@ class DocumentationGenerator
                     if ($exampleUrl !== false) {
                         $lastNUrls = '';
                         if (preg_match('/(&period)|(&date)/', $exampleUrl)) {
-                            $exampleUrlRss1 = $prefixUrls . $this->getExampleUrl($class, $methodName, array('date' => 'last10', 'period' => 'day') + $parametersToSet);
-                            $exampleUrlRss2 = $prefixUrls . $this->getExampleUrl($class, $methodName, array('date' => 'last5', 'period' => 'week',) + $parametersToSet);
-                            $lastNUrls = ",	RSS of the last <a target=_blank href='$exampleUrlRss1&format=rss$token_auth&translateColumnNames=1'>10 days</a>";
+                            $exampleUrlRss = $prefixUrls . $this->getExampleUrl($class, $methodName, array('date' => 'last10', 'period' => 'day') + $parametersToSet);
+                            $lastNUrls = ",	RSS of the last <a target=_blank href='$exampleUrlRss&format=rss$token_auth&translateColumnNames=1'>10 days</a>";
                         }
                         $exampleUrl = $prefixUrls . $exampleUrl;
                         $str .= " [ Example in
@@ -191,6 +190,11 @@ class DocumentationGenerator
         $aParameters['hideColumns'] = false;
         $aParameters['showColumns'] = false;
         $aParameters['filter_pattern_recursive'] = false;
+        $aParameters['pivotBy'] = false;
+        $aParameters['pivotByColumn'] = false;
+        $aParameters['pivotByColumnLimit'] = false;
+        $aParameters['disable_queued_filters'] = false;
+        $aParameters['disable_generic_filters'] = false;
 
         $moduleName = Proxy::getInstance()->getModuleNameFromClassName($class);
         $aParameters = array_merge(array('module' => 'API', 'method' => $moduleName . '.' . $methodName), $aParameters);

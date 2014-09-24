@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -9,6 +9,7 @@
 use Piwik\Access;
 use Piwik\Plugins\Goals\API;
 use Piwik\WidgetsList;
+use Piwik\Tests\Fixture;
 
 /**
  * Class Core_WidgetsListTest
@@ -35,14 +36,13 @@ class Core_WidgetsListTest extends DatabaseTestCase
         $widgets = WidgetsList::get();
         WidgetsList::_reset();
 
-
         // check if each category has the right number of widgets
         $numberOfWidgets = array(
             'VisitsSummary_VisitsSummary'  => 6,
             'Live!'                        => 4,
             'General_Visitors'             => 12,
-            'UserSettings_VisitorSettings' => 11,
-            'General_Actions'              => 8,
+            'UserSettings_VisitorSettings' => 12,
+            'General_Actions'              => 10,
             'Events_Events'                => 3,
             'Actions_SubmenuSitesearch'    => 5,
             'Referrers_Referrers'            => 7,
@@ -56,7 +56,7 @@ class Core_WidgetsListTest extends DatabaseTestCase
         // number of main categories
         $this->assertEquals(count($numberOfWidgets), count($widgets));
 
-        foreach ($numberOfWidgets AS $category => $widgetCount) {
+        foreach ($numberOfWidgets as $category => $widgetCount) {
             $this->assertEquals($widgetCount, count($widgets[$category]), sprintf("Widget: %s", $category));
         }
     }
@@ -88,8 +88,7 @@ class Core_WidgetsListTest extends DatabaseTestCase
             'Goals_Goals' => 2,
         );
 
-        foreach ($numberOfWidgets AS $category => $widgetCount) {
-            $expected = count($widgets[$category]);
+        foreach ($numberOfWidgets as $category => $widgetCount) {
             $this->assertEquals($widgetCount, count($widgets[$category]));
         }
     }
@@ -122,7 +121,7 @@ class Core_WidgetsListTest extends DatabaseTestCase
             'Goals_Ecommerce' => 5,
         );
 
-        foreach ($numberOfWidgets AS $category => $widgetCount) {
+        foreach ($numberOfWidgets as $category => $widgetCount) {
             $this->assertEquals($widgetCount, count($widgets[$category]));
         }
     }
@@ -166,7 +165,6 @@ class Core_WidgetsListTest extends DatabaseTestCase
 
         WidgetsList::_reset();
     }
-
 
     /**
      * @group Core

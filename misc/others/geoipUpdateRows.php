@@ -89,9 +89,7 @@ if (!Common::isPhpCliMode()) {
 function geoipUpdateError($message)
 {
     Log::error($message);
-    if (!Common::isPhpCliMode()) {
-        @header('HTTP/1.1 500 Internal Server Error', $replace = true, $responseCode = 500);
-    }
+    Common::sendHeader('HTTP/1.1 500 Internal Server Error', $replace = true, $responseCode = 500);
     exit;
 }
 
@@ -172,7 +170,7 @@ for (; $start < $end; $start += $limit) {
         continue;
     }
 
-    foreach ($rows as $i => $row) {
+    foreach ($rows as $row) {
         $fieldsToSet = array();
         foreach ($logVisitFieldsToUpdate as $field => $ignore) {
             if (empty($fieldsToSet[$field])) {

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -40,6 +40,13 @@ if (!defined('PIWIK_INCLUDE_PATH')) {
 
 @ignore_user_abort(true);
 
+if (file_exists(PIWIK_INCLUDE_PATH . '/vendor/autoload.php')) {
+    $vendorDirectory = PIWIK_INCLUDE_PATH . '/vendor';
+} else {
+    $vendorDirectory = PIWIK_INCLUDE_PATH . '/../..';
+}
+require_once $vendorDirectory . '/autoload.php';
+
 require_once PIWIK_INCLUDE_PATH . '/core/Plugin/Controller.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Plugin/ControllerAdmin.php';
 
@@ -69,30 +76,13 @@ require_once PIWIK_INCLUDE_PATH . '/core/Tracker/GoalManager.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Tracker/PageUrl.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Tracker/TableLogAction.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Tracker/Action.php';
-require_once PIWIK_INCLUDE_PATH . '/core/Tracker/ActionClickUrl.php';
-require_once PIWIK_INCLUDE_PATH . '/core/Tracker/ActionEvent.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Tracker/ActionPageview.php';
-require_once PIWIK_INCLUDE_PATH . '/core/Tracker/ActionSiteSearch.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Tracker/Request.php';
-require_once PIWIK_INCLUDE_PATH . '/core/Tracker/Referrer.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Tracker/VisitExcluded.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Tracker/VisitorNotFoundInDb.php';
 require_once PIWIK_INCLUDE_PATH . '/core/CacheFile.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Filesystem.php';
 require_once PIWIK_INCLUDE_PATH . '/core/Cookie.php';
-require_once PIWIK_INCLUDE_PATH . '/core/Loader.php';
-
-/*
- * Manually require needed vendor libraries, as composers autorequire would do too much
- */
-if (file_exists(PIWIK_INCLUDE_PATH . '/vendor/autoload.php')) {
-    $vendorDirectory = PIWIK_INCLUDE_PATH . '/vendor';
-} else {
-    $vendorDirectory = PIWIK_INCLUDE_PATH . '/../..';
-}
-require_once $vendorDirectory . '/autoload.php';
-require_once $vendorDirectory . '/mustangostang/spyc/Spyc.php';
-require_once $vendorDirectory . '/piwik/device-detector/DeviceDetector.php';
 
 session_cache_limiter('nocache');
 @date_default_timezone_set('UTC');
@@ -105,8 +95,6 @@ if (!defined('PIWIK_ENABLE_TRACKING') || PIWIK_ENABLE_TRACKING) {
 
 $GLOBALS['PIWIK_TRACKER_DEBUG'] = (bool) \Piwik\Config::getInstance()->Tracker['debug'];
 if ($GLOBALS['PIWIK_TRACKER_DEBUG'] === true) {
-    require_once PIWIK_INCLUDE_PATH . '/core/Loader.php';
-
     require_once PIWIK_INCLUDE_PATH . '/core/Error.php';
     \Piwik\Error::setErrorHandler();
     require_once PIWIK_INCLUDE_PATH . '/core/ExceptionHandler.php';

@@ -1,6 +1,6 @@
 <?php
 /**
- * Piwik - Open source web analytics
+ * Piwik - free/libre analytics platform
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
@@ -41,7 +41,7 @@ class VisitorLog extends Visualization
             $this->requestConfig->filter_limit = 20;
         }
 
-        $this->requestConfig->filter_sort_column = 'idVisit';
+        $this->requestConfig->filter_sort_column = 'lastActionTimestamp';
         $this->requestConfig->disable_generic_filters = true;
 
         $offset = Common::getRequestVar('filter_offset', 0);
@@ -86,7 +86,7 @@ class VisitorLog extends Visualization
                     array(
                         'id'    => static::ID,
                         'title' => Piwik::translate('Live_LinkVisitorLog'),
-                        'icon'  => 'plugins/Zeitgeist/images/table.png'
+                        'icon'  => 'plugins/Morpheus/images/table.png'
                     )
                 )
             )
